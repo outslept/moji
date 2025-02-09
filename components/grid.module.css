@@ -1,0 +1,311 @@
+.gridSystem {
+  width: 100%;
+  position: relative;
+  transform-origin: center;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 max(1rem, calc(100vw - 78rem) / 2);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: var(--grid-columns);
+  grid-template-rows: var(--grid-rows);
+  grid-auto-flow: var(--grid-auto-flow);
+  gap: var(--grid-gap, 1rem);
+  column-gap: var(--grid-column-gap);
+  row-gap: var(--grid-row-gap);
+  align-items: var(--grid-align-items);
+  justify-items: var(--grid-justify-items);
+  align-content: var(--grid-align-content);
+  justify-content: var(--grid-justify-content);
+  width: 100%;
+  position: relative;
+  padding: 0.5rem;
+  animation: gridFadeIn 0.3s ease-out;
+}
+
+@keyframes gridFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.grid.debug {
+  border: 1px solid hsl(var(--border) / 0.15);
+  border-radius: var(--radius);
+  background-color: hsl(var(--muted) / 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 0 1px hsl(var(--border) / 0.05),
+    0 1px 2px hsl(var(--shadow) / 0.05), 0 4px 8px hsl(var(--shadow) / 0.05);
+}
+
+.cell {
+  position: relative;
+  grid-column: var(--cell-column, auto);
+  grid-row: var(--cell-row, auto);
+  align-self: var(--cell-align-self);
+  justify-self: var(--cell-justify-self);
+  min-height: 0;
+  min-width: 0;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  padding: 1rem;
+  will-change: transform;
+}
+
+.cell.solid {
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border) / 0.1);
+  box-shadow: 0 0 0 1px hsl(var(--border) / 0.05),
+    0 1px 2px hsl(var(--shadow) / 0.05), 0 4px 8px hsl(var(--shadow) / 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.cell.solid:hover {
+  background-color: hsl(var(--accent) / 0.1);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 0 0 1px hsl(var(--border) / 0.1),
+    0 2px 4px hsl(var(--shadow) / 0.06), 0 8px 16px hsl(var(--shadow) / 0.08),
+    0 16px 32px hsl(var(--shadow) / 0.06);
+}
+
+.cell.solid:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.cell.debug::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px dashed hsl(var(--muted-foreground) / 0.3);
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+
+.cell > * {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+
+.cellDebug {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background-color: hsl(var(--background) / 0.8);
+  border: 1px solid hsl(var(--border) / 0.1);
+  border-radius: var(--radius);
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 1px 2px hsl(var(--shadow) / 0.05),
+    0 2px 4px hsl(var(--shadow) / 0.05);
+}
+
+.debugOverlay {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.5rem;
+  z-index: 20;
+  animation: debugOverlayFadeIn 0.2s ease-out;
+}
+
+@keyframes debugOverlayFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.debugInfo {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  background-color: hsl(var(--background) / 0.8);
+  border: 1px solid hsl(var(--border) / 0.1);
+  border-radius: var(--radius);
+  color: hsl(var(--muted-foreground));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 0 0 1px hsl(var(--border) / 0.05),
+    0 2px 4px hsl(var(--shadow) / 0.05), 0 4px 8px hsl(var(--shadow) / 0.05);
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: var(--grid-template-sm, var(--grid-columns));
+    grid-template-rows: var(--grid-template-rows-sm, var(--grid-rows));
+    padding: 0.75rem;
+  }
+  .cell {
+    grid-column: var(--cell-sm, var(--cell-column, auto));
+    grid-row: var(--cell-row-sm, var(--cell-row, auto));
+  }
+  .container {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: var(--grid-template-md, var(--grid-columns));
+    grid-template-rows: var(--grid-template-rows-md, var(--grid-rows));
+    padding: 1rem;
+  }
+  .cell {
+    grid-column: var(--cell-md, var(--cell-column, auto));
+    grid-row: var(--cell-row-md, var(--cell-row, auto));
+  }
+  .container {
+    padding: 0 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: var(--grid-template-lg, var(--grid-columns));
+    grid-template-rows: var(--grid-template-rows-lg, var(--grid-rows));
+  }
+  .cell {
+    grid-column: var(--cell-lg, var(--cell-column, auto));
+    grid-row: var(--cell-row-lg, var(--cell-row, auto));
+  }
+  .container {
+    padding: 0 4rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid {
+    grid-template-columns: var(--grid-template-xl, var(--grid-columns));
+    grid-template-rows: var(--grid-template-rows-xl, var(--grid-rows));
+  }
+  .cell {
+    grid-column: var(--cell-xl, var(--cell-column, auto));
+    grid-row: var(--cell-row-xl, var(--cell-row, auto));
+  }
+  .container {
+    padding: 0 5rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .grid {
+    grid-template-columns: var(--grid-template-2xl, var(--grid-columns));
+    grid-template-rows: var(--grid-template-rows-2xl, var(--grid-rows));
+  }
+  .cell {
+    grid-column: var(--cell-2xl, var(--cell-column, auto));
+    grid-row: var(--cell-row-2xl, var(--cell-row, auto));
+  }
+  .container {
+    padding: 0 6rem;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .cell.solid {
+    background-color: hsl(var(--background) / 0.7);
+    border-color: hsl(var(--border) / 0.15);
+    box-shadow: 0 0 0 1px hsl(var(--border) / 0.1),
+      0 2px 4px hsl(var(--shadow) / 0.2), 0 4px 8px hsl(var(--shadow) / 0.2);
+  }
+
+  .cell.solid:hover {
+    background-color: hsl(var(--accent) / 0.15);
+    box-shadow: 0 0 0 1px hsl(var(--border) / 0.15),
+      0 4px 8px hsl(var(--shadow) / 0.3), 0 8px 16px hsl(var(--shadow) / 0.3);
+  }
+
+  .grid.debug {
+    background-color: hsl(var(--muted) / 0.1);
+    border-color: hsl(var(--border) / 0.2);
+  }
+
+  .debugInfo,
+  .cellDebug {
+    background-color: hsl(var(--background) / 0.8);
+    border-color: hsl(var(--border) / 0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gridSystem,
+  .grid,
+  .cell,
+  .debugOverlay {
+    animation: none;
+    transition: none;
+  }
+
+  .cell.solid:hover {
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .cell.solid {
+    border: 1px solid CanvasText;
+  }
+
+  .cell.debug::before {
+    border-style: solid;
+  }
+}
+
+@supports (transform: translateZ(0)) {
+  .cell.solid {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cell.solid:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+}
+
+@supports (-webkit-backdrop-filter: none) or (backdrop-filter: none) {
+  .grid.debug,
+  .cell.solid,
+  .debugInfo,
+  .cellDebug {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .cell.solid {
+    border-width: 0.5px;
+  }
+}
