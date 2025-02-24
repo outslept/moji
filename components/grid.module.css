@@ -1,311 +1,308 @@
-.gridSystem {
-  width: 100%;
+/**
+* TODO: I should fix those styles..
+* This should NOT be this messy & ugly
+* Commented lines are those I need to fix 
+*/
+
+:root {
+  /* Colors */
+  --grid-guide-light: hsla(0, 0%, 92%, 0.15);
+  --grid-guide-dark: hsla(0, 0%, 12%, 0.15);
+  --grid-border-light: hsla(0, 0%, 92%, 1);
+  --grid-border-dark: hsla(0, 0%, 12%, 1);
+
+  /* Grid System */
+  --grid-base-unit: 8px;
+  --grid-gap-multiplier: 1;
+
+  /* Breakpoints (for reference) */
+  --grid-bp-xs: 0;
+  --grid-bp-sm: 640px;
+  --grid-bp-smd: 768px;
+  --grid-bp-md: 1024px;
+  --grid-bp-lg: 1280px;
+  --grid-bp-xl: 1536px;
+}
+
+/* System Container */
+.system {
   position: relative;
-  transform-origin: center;
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  width: 100%;
+  height: var(--height, 100%);
+  container-type: var(--container-type, inline-size);
+  container-name: var(--container-name);
+  overflow: visible;
 }
 
-.container {
-  max-width: 80rem;
-  margin: 0 auto;
-  padding: 0 max(1rem, calc(100vw - 78rem) / 2);
-}
-
+/* Grid Container */
 .grid {
+  --current-columns: var(--grid-columns, repeat(12, 1fr));
+  --current-rows: var(--grid-rows, auto);
+  --current-gap: var(--gap, calc(var(--grid-base-unit) * var(--grid-gap-multiplier)));
+  --current-row-gap: var(--row-gap, var(--current-gap));
+  --current-column-gap: var(--column-gap, var(--current-gap));
+
   display: grid;
-  grid-template-columns: var(--grid-columns);
-  grid-template-rows: var(--grid-rows);
-  grid-auto-flow: var(--grid-auto-flow);
-  gap: var(--grid-gap, 1rem);
-  column-gap: var(--grid-column-gap);
-  row-gap: var(--grid-row-gap);
-  align-items: var(--grid-align-items);
-  justify-items: var(--grid-justify-items);
-  align-content: var(--grid-align-content);
-  justify-content: var(--grid-justify-content);
+  position: relative;
   width: 100%;
-  position: relative;
-  padding: 0.5rem;
-  animation: gridFadeIn 0.3s ease-out;
+  height: var(--height, auto);
+
+  grid-template-columns: var(--grid-columns, repeat(12, 1fr));
+  grid-template-rows: var(--grid-rows, auto);
+  grid-auto-flow: var(--grid-auto-flow, row);
+  grid-auto-rows: var(--auto-rows, auto);
+  grid-auto-columns: var(--auto-columns, auto);
+
+  gap: var(--current-gap);
+  row-gap: var(--current-row-gap);
+  column-gap: var(--current-column-gap);
+
+  justify-items: var(--justify-items, start);
+  align-items: var(--align-items, start);
+  justify-content: var(--justify-content, start);
+  align-content: var(--align-content, start);
 }
 
-@keyframes gridFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.grid.debug {
-  border: 1px solid hsl(var(--border) / 0.15);
-  border-radius: var(--radius);
-  background-color: hsl(var(--muted) / 0.2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 0 0 1px hsl(var(--border) / 0.05),
-    0 1px 2px hsl(var(--shadow) / 0.05), 0 4px 8px hsl(var(--shadow) / 0.05);
-}
-
+/* Grid Cell */
 .cell {
-  position: relative;
-  grid-column: var(--cell-column, auto);
-  grid-row: var(--cell-row, auto);
-  align-self: var(--cell-align-self);
-  justify-self: var(--cell-justify-self);
-  min-height: 0;
+  --current-column: var(--grid-column, auto);
+  --current-row: var(--grid-row, auto);
+  --current-column-start: var(--grid-column-start, auto);
+  --current-column-end: var(--grid-column-end, auto);
+  --current-row-start: var(--grid-row-start, auto);
+  --current-row-end: var(--grid-row-end, auto);
+
   min-width: 0;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  padding: 1rem;
-  will-change: transform;
+  min-height: 0;
+  height: var(--cell-height, auto);
+
+  /* grid-column: var(--current-column); */
+  grid-row: var(--current-row);
+  /* grid-column-start: var(--current-column-start); */
+  /* grid-column-end: var(--current-column-end); */
+  grid-row-start: var(--current-row-start);
+  grid-row-end: var(--current-row-end);
+
+  justify-self: var(--justify-self, auto);
+  align-self: var(--align-self, auto);
+  order: var(--order, 0);
+
+  transition: inherit;
 }
 
-.cell.solid {
-  background-color: hsl(var(--background));
-  border: 1px solid hsl(var(--border) / 0.1);
-  box-shadow: 0 0 0 1px hsl(var(--border) / 0.05),
-    0 1px 2px hsl(var(--shadow) / 0.05), 0 4px 8px hsl(var(--shadow) / 0.05);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+/* Responsive Breakpoints */
+@container (width >= 0) {
+  .grid {
+    grid-template-columns: var(--xs-grid-columns, var(--current-columns));
+    gap: var(--xs-gap, var(--current-gap));
+  }
+  .cell {
+    /* grid-column: var(--xs-grid-column, var(--current-column)); */
+    grid-row: var(--xs-grid-row, var(--current-row));
+  }
 }
 
-.cell.solid:hover {
-  background-color: hsl(var(--accent) / 0.1);
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: 0 0 0 1px hsl(var(--border) / 0.1),
-    0 2px 4px hsl(var(--shadow) / 0.06), 0 8px 16px hsl(var(--shadow) / 0.08),
-    0 16px 32px hsl(var(--shadow) / 0.06);
+@container (width >= 640px) {
+  .grid {
+    grid-template-columns: var(--sm-grid-columns, var(--current-columns));
+    gap: var(--sm-gap, var(--current-gap));
+  }
+  .cell {
+    /* grid-column: var(--sm-grid-column, var(--current-column)); */
+    grid-row: var(--sm-grid-row, var(--current-row));
+  }
 }
 
-.cell.solid:active {
-  transform: translateY(0) scale(0.99);
+@container (width >= 768px) {
+  .grid {
+    grid-template-columns: var(--smd-grid-columns, var(--current-columns));
+    gap: var(--smd-gap, var(--current-gap));
+  }
+  .cell {
+    /* grid-column: var(--smd-grid-column, var(--current-column)); */
+    grid-row: var(--smd-grid-row, var(--current-row));
+  }
 }
 
-.cell.debug::before {
-  content: "";
+@container (width >= 1024px) {
+  .grid {
+    grid-template-columns: var(--md-grid-columns, var(--current-columns));
+    gap: var(--md-gap, var(--current-gap));
+  }
+  .cell {
+    /* grid-column: var(--md-grid-column, var(--current-column)); */
+    grid-row: var(--md-grid-row, var(--current-row));
+  }
+}
+
+@container (width >= 1280px) {
+  .grid {
+    grid-template-columns: var(--lg-grid-columns, var(--current-columns));
+    gap: var(--lg-gap, var(--current-gap));
+  }
+  .cell {
+    /* grid-column: var(--lg-grid-column, var(--current-column)); */
+    grid-row: var(--lg-grid-row, var(--current-row));
+  }
+}
+
+@container (width >= 1536px) {
+  .grid {
+    grid-template-columns: var(--xl-grid-columns, var(--current-columns));
+    gap: var(--xl-gap, var(--current-gap));
+  }
+  .cell {
+    /* grid-column: var(--xl-grid-column, var(--current-column)); */
+    grid-row: var(--xl-grid-row, var(--current-row));
+  }
+}
+
+/* Guide System */
+.guidesContainer {
   position: absolute;
   inset: 0;
-  border: 1px dashed hsl(var(--muted-foreground) / 0.3);
-  border-radius: var(--radius);
   pointer-events: none;
+  z-index: 1;
 }
 
-.cell > * {
+.guide {
+  position: absolute;
+  opacity: 0;
+}
+
+.guide.active {
+  opacity: 1;
+}
+
+.guide::before,
+.guide::after {
+  content: '';
+  position: absolute;
+  background: var(--grid-guide-color, var(--grid-guide-light));
+}
+
+.guide::before {
+  width: var(--guide-width, 1px);
   height: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.guide::after {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: hsl(var(--foreground));
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 450;
-  letter-spacing: -0.01em;
-}
-
-.cellDebug {
-  position: absolute;
-  top: 0.25rem;
-  left: 0.25rem;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  background-color: hsl(var(--background) / 0.8);
-  border: 1px solid hsl(var(--border) / 0.1);
-  border-radius: var(--radius);
-  color: hsl(var(--muted-foreground));
-  pointer-events: none;
-  z-index: 10;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  box-shadow: 0 1px 2px hsl(var(--shadow) / 0.05),
-    0 2px 4px hsl(var(--shadow) / 0.05);
-}
-
-.debugOverlay {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  padding: 0.5rem;
-  z-index: 20;
-  animation: debugOverlayFadeIn 0.2s ease-out;
-}
-
-@keyframes debugOverlayFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.debugInfo {
-  font-size: 0.75rem;
-  padding: 0.375rem 0.75rem;
-  background-color: hsl(var(--background) / 0.8);
-  border: 1px solid hsl(var(--border) / 0.1);
-  border-radius: var(--radius);
-  color: hsl(var(--muted-foreground));
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  box-shadow: 0 0 0 1px hsl(var(--border) / 0.05),
-    0 2px 4px hsl(var(--shadow) / 0.05), 0 4px 8px hsl(var(--shadow) / 0.05);
-  font-weight: 450;
-  letter-spacing: -0.01em;
-}
-
-@media (min-width: 640px) {
-  .grid {
-    grid-template-columns: var(--grid-template-sm, var(--grid-columns));
-    grid-template-rows: var(--grid-template-rows-sm, var(--grid-rows));
-    padding: 0.75rem;
-  }
-  .cell {
-    grid-column: var(--cell-sm, var(--cell-column, auto));
-    grid-row: var(--cell-row-sm, var(--cell-row, auto));
-  }
-  .container {
-    padding: 0 2rem;
-  }
-}
-
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: var(--grid-template-md, var(--grid-columns));
-    grid-template-rows: var(--grid-template-rows-md, var(--grid-rows));
-    padding: 1rem;
-  }
-  .cell {
-    grid-column: var(--cell-md, var(--cell-column, auto));
-    grid-row: var(--cell-row-md, var(--cell-row, auto));
-  }
-  .container {
-    padding: 0 3rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .grid {
-    grid-template-columns: var(--grid-template-lg, var(--grid-columns));
-    grid-template-rows: var(--grid-template-rows-lg, var(--grid-rows));
-  }
-  .cell {
-    grid-column: var(--cell-lg, var(--cell-column, auto));
-    grid-row: var(--cell-row-lg, var(--cell-row, auto));
-  }
-  .container {
-    padding: 0 4rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .grid {
-    grid-template-columns: var(--grid-template-xl, var(--grid-columns));
-    grid-template-rows: var(--grid-template-rows-xl, var(--grid-rows));
-  }
-  .cell {
-    grid-column: var(--cell-xl, var(--cell-column, auto));
-    grid-row: var(--cell-row-xl, var(--cell-row, auto));
-  }
-  .container {
-    padding: 0 5rem;
-  }
-}
-
-@media (min-width: 1536px) {
-  .grid {
-    grid-template-columns: var(--grid-template-2xl, var(--grid-columns));
-    grid-template-rows: var(--grid-template-rows-2xl, var(--grid-rows));
-  }
-  .cell {
-    grid-column: var(--cell-2xl, var(--cell-column, auto));
-    grid-row: var(--cell-row-2xl, var(--cell-row, auto));
-  }
-  .container {
-    padding: 0 6rem;
-  }
+  height: var(--guide-width, 1px);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 @media (prefers-color-scheme: dark) {
-  .cell.solid {
-    background-color: hsl(var(--background) / 0.7);
-    border-color: hsl(var(--border) / 0.15);
-    box-shadow: 0 0 0 1px hsl(var(--border) / 0.1),
-      0 2px 4px hsl(var(--shadow) / 0.2), 0 4px 8px hsl(var(--shadow) / 0.2);
+  .guide::before,
+  .guide::after {
+    background: var(--grid-guide-color, var(--grid-guide-dark));
   }
 
-  .cell.solid:hover {
-    background-color: hsl(var(--accent) / 0.15);
-    box-shadow: 0 0 0 1px hsl(var(--border) / 0.15),
-      0 4px 8px hsl(var(--shadow) / 0.3), 0 8px 16px hsl(var(--shadow) / 0.3);
-  }
-
-  .grid.debug {
-    background-color: hsl(var(--muted) / 0.1);
-    border-color: hsl(var(--border) / 0.2);
-  }
-
-  .debugInfo,
-  .cellDebug {
-    background-color: hsl(var(--background) / 0.8);
-    border-color: hsl(var(--border) / 0.2);
+  .grid {
+    --grid-guide-color: var(--grid-guide-dark);
+    --grid-border-color: var(--grid-border-dark);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .gridSystem,
-  .grid,
-  .cell,
-  .debugOverlay {
-    animation: none;
-    transition: none;
-  }
+.debug {
+  --debug-color: rgba(0, 255, 100, 0.05);
+  --debug-border: rgba(0, 255, 100, 0.2);
+}
 
-  .cell.solid:hover {
-    transform: none;
+.debug .grid {
+  outline: 1px dashed var(--debug-border);
+}
+
+.debug .cell {
+  outline: 1px dashed var(--debug-border);
+  background: var(--debug-color);
+}
+
+.debug .guide.active {
+  background: var(--debug-color);
+}
+
+.debug .guide.active::before,
+.debug .guide.active::after {
+  background: var(--debug-border);
+}
+
+/* Guide Visibility Controls */
+.guide.hidden {
+  display: none;
+}
+
+.hide-column .guide[data-type="column"],
+.hide-row .guide[data-type="row"],
+.hide-both .guide {
+  display: none;
+}
+
+/* Utility Classes */
+.solid {
+  background: var(--grid-guide-color);
+  box-shadow: 0 0 0 1px var(--grid-border-color);
+}
+
+/* Container Queries Support */
+@supports (container-type: inline-size) {
+  .system {
+    container-type: inline-size;
   }
 }
 
-@media (forced-colors: active) {
-  .cell.solid {
-    border: 1px solid CanvasText;
+/* Fallbacks */
+@supports not (container-type: inline-size) {
+  .system {
+    width: 100%;
   }
 
-  .cell.debug::before {
-    border-style: solid;
+  @media (min-width: 640px) {
+    .grid {
+      grid-template-columns: var(--sm-grid-columns, var(--current-columns));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .grid {
+      grid-template-columns: var(--smd-grid-columns, var(--current-columns));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .grid {
+      grid-template-columns: var(--md-grid-columns, var(--current-columns));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .grid {
+      grid-template-columns: var(--lg-grid-columns, var(--current-columns));
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .grid {
+      grid-template-columns: var(--xl-grid-columns, var(--current-columns));
+    }
   }
 }
 
-@supports (transform: translateZ(0)) {
-  .cell.solid {
-    transform: translateZ(0);
-    backface-visibility: hidden;
+/* Print Styles */
+@media print {
+  .guide {
+    display: none !important;
   }
-}
 
-@media (hover: hover) and (pointer: fine) {
-  .cell.solid:hover {
-    transform: translateY(-2px) scale(1.01);
+  .grid {
+    gap: 16px !important;
   }
-}
 
-@supports (-webkit-backdrop-filter: none) or (backdrop-filter: none) {
-  .grid.debug,
-  .cell.solid,
-  .debugInfo,
-  .cellDebug {
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-  }
-}
-
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .cell.solid {
-    border-width: 0.5px;
+  .cell {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

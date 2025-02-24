@@ -1,23 +1,19 @@
-"use client";
+'use client'
 
 export {
   Grid,
   GridCell,
   GridSystem,
-  //
-  Root,
-  Cell,
-  System,
-} from "./grid";
+} from './grid'
 
 export type {
-  GridBreakpoint,
-  ResponsiveValue,
-  GuideType,
-  GridFlow,
+  ContainerQuery,
+  ContainerType,
   GridAlignment,
-  GridJustification,
-  GridProps,
+  GridAutoFlow,
   GridCellProps,
+  GridJustification,
+  GridPlacement,
+  GridProps,
   GridSystemProps,
-} from "./grid";
+} from './grid'
