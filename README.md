@@ -10,7 +10,7 @@ This project was inspired by the [Vercel Geist UI Grid component](https://vercel
 
 Moji is currently in early development and is primarily maintained for personal use. While it's open-source, it may not yet be ready for production use in other projects. Contributions and feedback are welcome, but please note that active development and support may be limited.
 
-## License 
+## License
 
 Moji is licensed under the MIT License. See the LICENSE file for more information.
 

@@ -70,3 +70,56 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+:root {
+  /* Цвета для отладки */
+  --debug-color: rgb(255 0 221 / 0.8);
+  --debug-cell-bg: rgb(104 205 255 / 0.15);
+  --guide-color: rgb(0 224 255 / 0.1);
+  
+  /* Брейкпоинты */
+  --sm: 640px;
+  --md: 768px;
+  --lg: 1024px;
+  --xl: 1280px;
+  --2xl: 1536px;
+  
+  /* Типографика */
+  --font-mono: ui-monospace, Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono', 
+    'Roboto Mono', 'Oxygen Mono', 'Ubuntu Monospace', 'Source Code Pro',
+    'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
+}
+
+/* Генерация медиа-запросов */
+@media (min-width: 640px) { .grid-cols-sm { --columns: attr(data-columns); } }
+@media (min-width: 768px) { .grid-cols-md { --columns: attr(data-columns); } }
+@media (min-width: 1024px) { .grid-cols-lg { --columns: attr(data-columns); } }
+@media (min-width: 1280px) { .grid-cols-xl { --columns: attr(data-columns); } }
+@media (min-width: 1536px) { .grid-cols-2xl{ --columns: attr(data-columns); } }
+
+/* Глобальные анимации */
+.grid [data-guide-width]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    to right,
+    var(--guide-color) var(--guide-width),
+    transparent var(--guide-width)
+  );
+  animation: grid-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Кастомные свойства высоты */
+.grid[style*='--grid-height-auto'] { height: auto; }
+.grid[style*='--grid-height-full'] { height: 100%; }
+.grid[style*='--grid-height-preserve-aspect-ratio'] { 
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 по умолчанию */
+}
+
+/* Скрытие направляющих */
+[data-hide-guides="row"]::before { background-image: none; }
+[data-hide-guides="column"]::after { background-image: none; }
+[data-hide-guides="both"]::before,
+[data-hide-guides="both"]::after { background-image: none; }
