@@ -7,178 +7,100 @@ $breakpoints: (
   '2xl': 1536px
 );
 
-:root {
-  // Light theme variables
-  --grid-background: #ffffff;
-  --grid-surface: #f5f5f7;
-  --grid-border-light: rgba(0, 0, 0, 0.1);
-  --grid-shadow-light: rgba(0, 0, 0, 0.05);
-  --grid-debug-line: rgba(0, 122, 255, 0.2);
-  --grid-debug-container: rgba(0, 122, 255, 0.1);
-  --grid-debug-item: rgba(255, 59, 48, 0.1);
-  --grid-text-primary: #000000;
-  --grid-text-secondary: #6e6e73;
-  --grid-accent: #0071e3;
+$spacing: (
+  'none': 0,
+  'tight': 8px,
+  'standard': 16px,
+  'relaxed': 24px,
+  'wide': 32px
+);
 
-  // Animation properties
-  --grid-transition-duration: 0.3s;
-  --grid-transition-timing: cubic-bezier(0.25, 0.1, 0.25, 1);
+:root {
+  --grid-background: #ffffff;
+  --grid-surface: #f8fafc;
+  --grid-border: rgba(0, 0, 0, 0.1);
+  --grid-shadow: rgba(0, 0, 0, 0.05);
+  --grid-debug-line: rgba(0, 122, 255, 0.3);
+  --grid-debug-container: rgba(0, 122, 255, 0.05);
+  --grid-debug-item: rgba(255, 59, 48, 0.05);
+  --grid-text-primary: #1a202c;
+  --grid-text-secondary: #718096;
+  --grid-accent: #3182ce;
+
+  --grid-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --grid-transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    // Dark theme variables
-    --grid-background: #1d1d1f;
-    --grid-surface: #2c2c2e;
-    --grid-border-light: rgba(255, 255, 255, 0.1);
-    --grid-shadow-light: rgba(0, 0, 0, 0.2);
-    --grid-debug-line: rgba(10, 132, 255, 0.3);
-    --grid-debug-container: rgba(10, 132, 255, 0.15);
-    --grid-debug-item: rgba(255, 69, 58, 0.15);
-    --grid-text-primary: #ffffff;
-    --grid-text-secondary: #86868b;
-    --grid-accent: #0a84ff;
+    --grid-background: #1a202c;
+    --grid-surface: #2d3748;
+    --grid-border: rgba(255, 255, 255, 0.1);
+    --grid-shadow: rgba(0, 0, 0, 0.3);
+    --grid-debug-line: rgba(66, 153, 225, 0.4);
+    --grid-debug-container: rgba(66, 153, 225, 0.1);
+    --grid-debug-item: rgba(245, 101, 101, 0.1);
+    --grid-text-primary: #f7fafc;
+    --grid-text-secondary: #a0aec0;
+    --grid-accent: #63b3ed;
   }
 }
 
-// Mixins
 @mixin respond-to($breakpoint) {
   @if map-has-key($breakpoints, $breakpoint) {
     @media (min-width: #{map-get($breakpoints, $breakpoint)}) {
       @content;
     }
-  } @else {
-    @error "Breakpoint '#{$breakpoint}' not found in $breakpoints map.";
   }
-}
-
-@mixin flex-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 @mixin transition($properties...) {
   $transitions: ();
   @each $property in $properties {
-    $transitions: append($transitions, $property var(--grid-transition-duration) var(--grid-transition-timing), comma);
+    $transitions: append($transitions, $property var(--grid-transition), comma);
   }
   transition: $transitions;
 }
 
-// Base styles
 [data-grid-root] {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--grid-text-primary);
   background-color: var(--grid-background);
   @include transition(background-color, color);
 
-  * {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
+  }
+
+  &[data-debug] {
+    --grid-debug-enabled: 1;
   }
 }
 
-// Grid Container
 [data-grid-container] {
   display: grid;
   position: relative;
   @include transition(all);
 
-  &.with-border {
-    border: 1px solid var(--grid-border-light);
-    border-radius: 12px;
-  }
-
-  &.with-shadow {
-    box-shadow: 0 4px 20px var(--grid-shadow-light);
-  }
-
-  // Spacing variants
-  &.spacing {
-    &-tight { gap: 8px; }
-    &-standard { gap: 16px; }
-    &-relaxed { gap: 24px; }
-    &-wide { gap: 32px; }
-
-    @include respond-to('md') {
-      &-tight { gap: 12px; }
-      &-standard { gap: 24px; }
-      &-relaxed { gap: 32px; }
-      &-wide { gap: 48px; }
-    }
-  }
-
-  &.columns-1 { grid-template-columns: 1fr; }
-  &.columns-2 { grid-template-columns: repeat(2, 1fr); }
-  &.columns-3 { grid-template-columns: repeat(3, 1fr); }
-  &.columns-4 { grid-template-columns: repeat(4, 1fr); }
-  &.columns-5 { grid-template-columns: repeat(5, 1fr); }
-  &.columns-6 { grid-template-columns: repeat(6, 1fr); }
-
-  &.auto-fit {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
-
-  &.auto-fill {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  }
-
-  @include respond-to('sm') {
-    &.sm\:columns-1 { grid-template-columns: 1fr; }
-    &.sm\:columns-2 { grid-template-columns: repeat(2, 1fr); }
-    &.sm\:columns-3 { grid-template-columns: repeat(3, 1fr); }
-    &.sm\:columns-4 { grid-template-columns: repeat(4, 1fr); }
-  }
-
-  @include respond-to('md') {
-    &.md\:columns-1 { grid-template-columns: 1fr; }
-    &.md\:columns-2 { grid-template-columns: repeat(2, 1fr); }
-    &.md\:columns-3 { grid-template-columns: repeat(3, 1fr); }
-    &.md\:columns-4 { grid-template-columns: repeat(4, 1fr); }
-    &.md\:columns-5 { grid-template-columns: repeat(5, 1fr); }
-    &.md\:columns-6 { grid-template-columns: repeat(6, 1fr); }
-  }
-
-  @include respond-to('lg') {
-    &.lg\:columns-1 { grid-template-columns: 1fr; }
-    &.lg\:columns-2 { grid-template-columns: repeat(2, 1fr); }
-    &.lg\:columns-3 { grid-template-columns: repeat(3, 1fr); }
-    &.lg\:columns-4 { grid-template-columns: repeat(4, 1fr); }
-    &.lg\:columns-5 { grid-template-columns: repeat(5, 1fr); }
-    &.lg\:columns-6 { grid-template-columns: repeat(6, 1fr); }
-  }
-
-  @include respond-to('xl') {
-    &.xl\:columns-5 { grid-template-columns: repeat(5, 1fr); }
-    &.xl\:columns-6 { grid-template-columns: repeat(6, 1fr); }
-  }
-
   &.grid-debug {
     background-color: var(--grid-debug-container);
-    outline: 1px dashed var(--grid-debug-line);
+    outline: 2px dashed var(--grid-debug-line);
+    outline-offset: -1px;
   }
 }
 
-// Grid Item
 [data-grid-item] {
   position: relative;
   @include transition(transform, box-shadow, opacity);
 
-  &.with-border {
-    border: 1px solid var(--grid-border-light);
-    border-radius: 12px;
-  }
-
-  &.with-shadow {
-    box-shadow: 0 2px 10px var(--grid-shadow-light);
-  }
-
-  &.interactive {
+  &[data-interactive] {
     cursor: pointer;
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 20px var(--grid-shadow-light);
+      box-shadow: 0 4px 12px var(--grid-shadow);
     }
 
     &:active {
@@ -187,152 +109,131 @@ $breakpoints: (
     }
   }
 
-  &.content-center {
-    @include flex-center;
-  }
-
-  &.content-start {
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
-  }
-
-  &.content-end {
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
-  }
-
-  // Column span utilities
-  @for $i from 1 through 12 {
-    &.col-span-#{$i} {
-      grid-column: span #{$i};
-    }
-  }
-
-  // Row span utilities
-  @for $i from 1 through 12 {
-    &.row-span-#{$i} {
-      grid-row: span #{$i};
-    }
-  }
-
-  // Responsive column spans
-  @include respond-to('sm') {
-    @for $i from 1 through 6 {
-      &.sm\:col-span-#{$i} {
-        grid-column: span #{$i};
-      }
-    }
-  }
-
-  @include respond-to('md') {
-    @for $i from 1 through 6 {
-      &.md\:col-span-#{$i} {
-        grid-column: span #{$i};
-      }
-    }
-  }
-
-  @include respond-to('lg') {
-    @for $i from 1 through 12 {
-      &.lg\:col-span-#{$i} {
-        grid-column: span #{$i};
-      }
-    }
-  }
-
-  // Padding variants
-  &.p {
-    &-0 { padding: 0; }
-    &-1 { padding: 8px; }
-    &-2 { padding: 16px; }
-    &-3 { padding: 24px; }
-    &-4 { padding: 32px; }
-    &-5 { padding: 48px; }
-  }
-
-  &.hover-lift {
-    transition: transform 0.3s var(--grid-transition-timing),
-                box-shadow 0.3s var(--grid-transition-timing);
-
-    &:hover {
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: 0 16px 30px var(--grid-shadow-light);
-    }
-  }
-
-  &.hover-scale {
-    transition: transform 0.3s var(--grid-transition-timing);
-
-    &:hover {
-      transform: scale(1.05);
-    }
-  }
-
   &.grid-debug {
     background-color: var(--grid-debug-item);
     outline: 1px dotted var(--grid-debug-line);
+    outline-offset: -1px;
   }
 }
 
-// Grid Area
 [data-grid-area] {
   position: relative;
   @include transition(all);
-
-  &.with-border {
-    border: 1px solid var(--grid-border-light);
-    border-radius: 12px;
-  }
-
-  &.with-padding {
-    padding: 16px;
-
-    @include respond-to('md') {
-      padding: 24px;
-    }
-  }
-
-  &[data-area="header"] { grid-area: header; }
-  &[data-area="sidebar"] { grid-area: sidebar; }
-  &[data-area="main"] { grid-area: main; }
-  &[data-area="footer"] { grid-area: footer; }
-  &[data-area="nav"] { grid-area: nav; }
-  &[data-area="content"] { grid-area: content; }
 }
 
-// Grid Stack
 [data-grid-stack] {
   position: relative;
 
-  [data-grid-stack-item] {
-    position: absolute;
-    inset: 0;
+  .grid-stack-item {
     @include transition(opacity, transform);
   }
+}
 
-  &.fade-effect {
-    [data-grid-stack-item]:not(:last-child) {
-      opacity: 0;
+[data-grid-auto] {
+  display: grid;
+  @include transition(all);
+}
+
+[data-grid-masonry] {
+  display: grid;
+  @include transition(all);
+}
+
+[data-grid-debug-overlay] {
+  pointer-events: none;
+  z-index: 9999;
+
+  .grid-debug-line {
+    @include transition(opacity);
+
+    &-column {
+      border-left: 1px solid var(--grid-debug-line);
     }
 
-    &:hover [data-grid-stack-item] {
-      opacity: 0.5;
-    }
-
-    &:hover [data-grid-stack-item]:hover {
-      opacity: 1;
-      z-index: 1;
+    &-row {
+      border-top: 1px solid var(--grid-debug-line);
     }
   }
 }
 
-// Debug overlay
-.grid-debug-overlay {
-  pointer-events: none;
+.grid-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  [data-grid-debug-line] {
-    background-color: var(--grid-debug-line) !important;
+.grid-stretch {
+  width: 100%;
+  height: 100%;
+}
+
+.grid-card {
+  background: var(--grid-surface);
+  border: 1px solid var(--grid-border);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px var(--grid-shadow);
+  @include transition(box-shadow, transform);
+
+  &:hover {
+    box-shadow: 0 4px 12px var(--grid-shadow);
+    transform: translateY(-1px);
+  }
+}
+
+.grid-interactive {
+  cursor: pointer;
+  @include transition(transform, box-shadow);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--grid-shadow);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.grid-fade-in {
+  animation: gridFadeIn 0.3s var(--grid-transition);
+}
+
+.grid-slide-up {
+  animation: gridSlideUp 0.3s var(--grid-transition);
+}
+
+.grid-scale-in {
+  animation: gridScaleIn 0.3s var(--grid-transition);
+}
+
+@keyframes gridFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gridSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gridScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

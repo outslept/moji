@@ -1,184 +1,186 @@
 'use client'
 
-import type { ComponentPropsWithoutRef, ReactNode } from 'react'
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '../lib/utils'
 
-// Breakpoints following Tailwind defaults
+/* -------------------------------------------------------------------------------------------------
+ * Constants & Types
+ * ----------------------------------------------------------------------------------------------- */
+
 export const BREAKPOINTS = {
-  'base': 0, // Default
-  'sm': 640, // Small screens
-  'md': 768, // Medium screens
-  'lg': 1024, // Large screens
-  'xl': 1280, // Extra large screens
-  '2xl': 1536, // 2XL screens
+  'base': 0,
+  'sm': 640,
+  'md': 768,
+  'lg': 1024,
+  'xl': 1280,
+  '2xl': 1536,
 } as const
 
-/* -------------------------------------------------------------------------------------------------
- * Types
- * ----------------------------------------------------------------------------------------------- */
 export type Breakpoint = keyof typeof BREAKPOINTS
-export type GridDimension = number | string
-export type GridTemplateValue = string | number | (string | number)[]
-export type GridAutoFlow = 'row' | 'column' | 'dense' | 'row dense' | 'column dense'
-export type GridAlignment = 'start' | 'end' | 'center' | 'stretch' | 'baseline'
-export type GridJustification = 'start' | 'end' | 'center' | 'stretch' | 'space-between' | 'space-around' | 'space-evenly'
-export type GridPlacement = number | `${number}` | 'auto' | `span ${number}` | `${number} / ${number}` | `${number} / span ${number}`
 export type ResponsiveProp<T> = T | Partial<Record<Breakpoint, T>>
 
-interface GridContextValue {
-  readonly debug: boolean
-  readonly currentBreakpoint: Breakpoint
-}
+// Grid template types
+export type GridColumns = number | 'auto-fit' | 'auto-fill' | string | (string | number)[]
+export type GridRows = number | 'auto' | string | (string | number)[]
+export type GridGap = number | string
+export type GridAlignment = 'start' | 'end' | 'center' | 'stretch' | 'baseline'
+export type GridJustification = 'start' | 'end' | 'center' | 'stretch' | 'space-between' | 'space-around' | 'space-evenly'
+export type GridAutoFlow = 'row' | 'column' | 'dense' | 'row dense' | 'column dense'
+export type GridPlacement = number | 'auto' | `span ${number}` | `${number} / ${number}` | `${number} / span ${number}`
+
+// Spacing presets
+export type SpacingPreset = 'none' | 'tight' | 'standard' | 'relaxed' | 'wide'
 
 /* -------------------------------------------------------------------------------------------------
  * Context
  * ----------------------------------------------------------------------------------------------- */
+
+interface GridContextValue {
+  debug: boolean
+  currentBreakpoint: Breakpoint
+  spacing: SpacingPreset
+}
+
 const GridContext = createContext<GridContextValue | null>(null)
 
 function useGrid() {
   const context = useContext(GridContext)
   if (!context) {
-    throw new Error('Grid components must be used within a Grid.Root component')
+    throw new Error('Grid components must be used within Grid.Root')
   }
   return context
 }
 
-/**
- * Determines the current breakpoint based on window width
- */
+/* -------------------------------------------------------------------------------------------------
+ * Hooks
+ * ----------------------------------------------------------------------------------------------- */
+
 function useBreakpoint(): Breakpoint {
   const [breakpoint, setBreakpoint] = useState<Breakpoint>('base')
 
   useEffect(() => {
-    // Handler to call on window resize
-    const handleResize = () => {
+    const updateBreakpoint = () => {
       const width = window.innerWidth
       const entries = Object.entries(BREAKPOINTS) as [Breakpoint, number][]
-      // Find the largest breakpoint that's smaller than the current width
-      const newBreakpoint = entries
+      const current = entries
         .filter(([, value]) => width >= value)
         .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'base'
-
-      setBreakpoint(newBreakpoint)
+      setBreakpoint(current)
     }
 
-    handleResize()
-
-    window.addEventListener('resize', handleResize)
-
-    return () => window.removeEventListener('resize', handleResize)
+    updateBreakpoint()
+    window.addEventListener('resize', updateBreakpoint)
+    return () => window.removeEventListener('resize', updateBreakpoint)
   }, [])
 
   return breakpoint
 }
 
 /* -------------------------------------------------------------------------------------------------
- * Utility functions
+ * Utilities
  * ----------------------------------------------------------------------------------------------- */
 
-/**
- * Converts a responsive property to CSS variables
- */
-function generateResponsiveCSS<T>(
-  prop: ResponsiveProp<T> | undefined,
-  cssProperty: string,
-  transform: (value: T) => string = String as any,
-): Record<string, string> {
-  if (prop === undefined)
-    return {}
+function resolveResponsiveValue<T>(
+  value: ResponsiveProp<T> | undefined,
+  currentBreakpoint: Breakpoint,
+): T | undefined {
+  if (value === undefined)
+    return undefined
 
-  const result: Record<string, string> = {}
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    const breakpoints: Breakpoint[] = ['2xl', 'xl', 'lg', 'md', 'sm', 'base']
+    const currentIndex = breakpoints.indexOf(currentBreakpoint)
 
-  if (typeof prop === 'object' && prop !== null) {
-    // Type assertion to help TypeScript understand this is a record
-    const responsiveObj = prop as Record<string, T>
-
-    // For each breakpoint, create a CSS variable
-    Object.entries(responsiveObj).forEach(([bp, value]) => {
-      if (bp in BREAKPOINTS) {
-        // Use string indexing for custom properties
-        result[`--grid-${bp}-${cssProperty}`] = transform(value)
+    // Find the closest defined value at or below current breakpoint
+    for (let i = currentIndex; i < breakpoints.length; i++) {
+      const bp = breakpoints[i]
+      if (value[bp] !== undefined) {
+        return value[bp]
       }
-    })
-
-    // Set the base property using CSS variables and fallbacks
-    const breakpoints = Object.keys(BREAKPOINTS) as Breakpoint[]
-    const cssVars = breakpoints
-      .map(bp => `var(--grid-${bp}-${cssProperty}, undefined)`)
-      .join(', ')
-
-    // Use a more general type for custom CSS properties
-    result[cssProperty] = `resolveResponsive(${cssVars})`
-  }
-  else {
-    // For a single value, just set the property directly
-    result[cssProperty] = transform(prop as T)
+    }
+    return undefined
   }
 
-  return result
+  return value as T
 }
 
-/**
- * Transforms grid template values into CSS-compatible strings
- */
-function transformGridTemplate(value: GridTemplateValue): string {
+function transformColumns(value: GridColumns): string {
   if (typeof value === 'number') {
     return `repeat(${value}, 1fr)`
   }
-  else if (Array.isArray(value)) {
-    return value.map(item =>
-      typeof item === 'number' ? `${item}fr` : item,
-    ).join(' ')
+  if (value === 'auto-fit') {
+    return 'repeat(auto-fit, minmax(250px, 1fr))'
+  }
+  if (value === 'auto-fill') {
+    return 'repeat(auto-fill, minmax(250px, 1fr))'
+  }
+  if (Array.isArray(value)) {
+    return value.map(v => typeof v === 'number' ? `${v}fr` : v).join(' ')
   }
   return value
 }
 
-/**
- * Transforms gap values into CSS-compatible strings
- */
-function transformGap(value: string | number): string {
+function transformRows(value: GridRows): string {
+  if (typeof value === 'number') {
+    return `repeat(${value}, 1fr)`
+  }
+  if (value === 'auto') {
+    return 'auto'
+  }
+  if (Array.isArray(value)) {
+    return value.map(v => typeof v === 'number' ? `${v}fr` : v).join(' ')
+  }
+  return value
+}
+
+function transformGap(value: GridGap): string {
   return typeof value === 'number' ? `${value}px` : value
+}
+
+function getSpacingValue(preset: SpacingPreset): string {
+  const spacingMap: Record<SpacingPreset, string> = {
+    none: '0',
+    tight: '8px',
+    standard: '16px',
+    relaxed: '24px',
+    wide: '32px',
+  }
+  return spacingMap[preset]
 }
 
 /* -------------------------------------------------------------------------------------------------
  * Grid.Root
  * ----------------------------------------------------------------------------------------------- */
+
 export interface GridRootProps extends ComponentPropsWithoutRef<'div'> {
-  /**
-   * Enable debug mode to visualize grid lines
-   */
   debug?: boolean
-  /**
-   * Children to render within the grid system
-   */
+  spacing?: SpacingPreset
   children?: ReactNode
 }
 
-/**
- * Root component for the Grid system.
- * Provides context and settings for nested Grid components.
- */
-const GridRoot: React.FC<React.ComponentProps<'div'> & GridRootProps> = ({
+function GridRoot({
   debug = false,
+  spacing = 'standard',
   children,
   className,
   ...props
-}) => {
+}: GridRootProps) {
   const currentBreakpoint = useBreakpoint()
 
-  // Create context value
   const contextValue = useMemo(() => ({
     debug,
     currentBreakpoint,
-  }), [debug, currentBreakpoint])
+    spacing,
+  }), [debug, currentBreakpoint, spacing])
 
   return (
     <GridContext value={contextValue}>
       <div
-        className={cn('grid-system', className)}
+        className={cn('grid-root', className)}
         data-grid-root=""
         data-breakpoint={currentBreakpoint}
+        data-debug={debug ? '' : undefined}
         {...props}
       >
         {children}
@@ -187,78 +189,31 @@ const GridRoot: React.FC<React.ComponentProps<'div'> & GridRootProps> = ({
   )
 }
 
-GridRoot.displayName = 'Grid.Root'
-
 /* -------------------------------------------------------------------------------------------------
  * Grid.Container
  * ----------------------------------------------------------------------------------------------- */
+
 export interface GridContainerProps extends ComponentPropsWithoutRef<'div'> {
-  /**
-   * Define the grid columns
-   * @example columns={3} or columns={{ base: 1, md: 2, lg: 3 }}
-   */
-  columns?: ResponsiveProp<GridTemplateValue>
-  /**
-   * Define the grid rows
-   * @example rows="auto 1fr auto" or rows={{ base: "auto", md: "auto 1fr" }}
-   */
-  rows?: ResponsiveProp<GridTemplateValue>
-  /**
-   * Define the grid template areas
-   * @example areas={`"header header" "sidebar content" "footer footer"`}
-   */
+  columns?: ResponsiveProp<GridColumns>
+  rows?: ResponsiveProp<GridRows>
   areas?: ResponsiveProp<string>
-  /**
-   * Set both column and row gaps
-   */
-  gap?: ResponsiveProp<string | number>
-  /**
-   * Set column gaps
-   */
-  columnGap?: ResponsiveProp<string | number>
-  /**
-   * Set row gaps
-   */
-  rowGap?: ResponsiveProp<string | number>
-  /**
-   * Control how auto-placed items are flowed into the grid
-   */
+  gap?: ResponsiveProp<GridGap> | SpacingPreset
+  columnGap?: ResponsiveProp<GridGap>
+  rowGap?: ResponsiveProp<GridGap>
   autoFlow?: ResponsiveProp<GridAutoFlow>
-  /**
-   * Control the size of implicitly created rows
-   */
   autoRows?: ResponsiveProp<string>
-  /**
-   * Control the size of implicitly created columns
-   */
   autoColumns?: ResponsiveProp<string>
-  /**
-   * Align grid items along the inline (row) axis
-   */
   justifyItems?: ResponsiveProp<GridJustification>
-  /**
-   * Align grid items along the block (column) axis
-   */
   alignItems?: ResponsiveProp<GridAlignment>
-  /**
-   * Align the grid along the inline (row) axis
-   */
   justifyContent?: ResponsiveProp<GridJustification>
-  /**
-   * Align the grid along the block (column) axis
-   */
   alignContent?: ResponsiveProp<GridAlignment>
-  /**
-   * Children to render within the grid container
-   */
+  minItemWidth?: string
+  maxItemWidth?: string
+  aspectRatio?: string
   children?: ReactNode
 }
 
-/**
- * Grid container component that creates a CSS Grid layout.
- * Supports all CSS Grid properties with responsive capabilities.
- */
-const GridContainer: React.FC<React.ComponentProps<'div'> & GridContainerProps> = ({
+function GridContainer({
   columns,
   rows,
   areas,
@@ -272,32 +227,104 @@ const GridContainer: React.FC<React.ComponentProps<'div'> & GridContainerProps> 
   alignItems,
   justifyContent,
   alignContent,
+  minItemWidth = '250px',
+  maxItemWidth = '1fr',
+  aspectRatio,
   className,
   style,
   children,
   ...props
-}) => {
-  const { debug } = useGrid()
+}: GridContainerProps) {
+  const { debug, currentBreakpoint, spacing } = useGrid()
 
-  // Generate CSS properties for grid container
-  const gridStyles = useMemo(() => {
-    return {
-      ...generateResponsiveCSS(columns, 'grid-template-columns', transformGridTemplate),
-      ...generateResponsiveCSS(rows, 'grid-template-rows', transformGridTemplate),
-      ...generateResponsiveCSS(areas, 'grid-template-areas'),
-      ...generateResponsiveCSS(gap, 'gap', transformGap),
-      ...generateResponsiveCSS(columnGap, 'column-gap', transformGap),
-      ...generateResponsiveCSS(rowGap, 'row-gap', transformGap),
-      ...generateResponsiveCSS(autoFlow, 'grid-auto-flow'),
-      ...generateResponsiveCSS(autoRows, 'grid-auto-rows'),
-      ...generateResponsiveCSS(autoColumns, 'grid-auto-columns'),
-      ...generateResponsiveCSS(justifyItems, 'justify-items'),
-      ...generateResponsiveCSS(alignItems, 'align-items'),
-      ...generateResponsiveCSS(justifyContent, 'justify-content'),
-      ...generateResponsiveCSS(alignContent, 'align-content'),
+  const gridStyles = useMemo((): CSSProperties => {
+    const resolvedColumns = resolveResponsiveValue(columns, currentBreakpoint)
+    const resolvedRows = resolveResponsiveValue(rows, currentBreakpoint)
+    const resolvedAreas = resolveResponsiveValue(areas, currentBreakpoint)
+
+    // Handle gap - can be responsive prop or spacing preset
+    let resolvedGap: string | undefined
+    if (typeof gap === 'string' && ['none', 'tight', 'standard', 'relaxed', 'wide'].includes(gap)) {
+      resolvedGap = getSpacingValue(gap as SpacingPreset)
+    }
+    else {
+      const gapValue = resolveResponsiveValue(gap as ResponsiveProp<GridGap>, currentBreakpoint)
+      resolvedGap = gapValue ? transformGap(gapValue) : getSpacingValue(spacing)
+    }
+
+    const styles: CSSProperties = {
       display: 'grid',
-      ...style,
-    } as React.CSSProperties
+      gap: resolvedGap,
+    }
+
+    if (resolvedColumns) {
+      styles.gridTemplateColumns = transformColumns(resolvedColumns)
+    }
+
+    if (resolvedRows) {
+      styles.gridTemplateRows = transformRows(resolvedRows)
+    }
+
+    if (resolvedAreas) {
+      styles.gridTemplateAreas = resolvedAreas
+    }
+
+    // Handle auto-fit/auto-fill with custom sizing
+    if (resolvedColumns === 'auto-fit' || resolvedColumns === 'auto-fill') {
+      styles.gridTemplateColumns = `repeat(${resolvedColumns}, minmax(${minItemWidth}, ${maxItemWidth}))`
+    }
+
+    // Apply other responsive properties
+    const resolvedColumnGap = resolveResponsiveValue(columnGap, currentBreakpoint)
+    if (resolvedColumnGap) {
+      styles.columnGap = transformGap(resolvedColumnGap)
+    }
+
+    const resolvedRowGap = resolveResponsiveValue(rowGap, currentBreakpoint)
+    if (resolvedRowGap) {
+      styles.rowGap = transformGap(resolvedRowGap)
+    }
+
+    const resolvedAutoFlow = resolveResponsiveValue(autoFlow, currentBreakpoint)
+    if (resolvedAutoFlow) {
+      styles.gridAutoFlow = resolvedAutoFlow
+    }
+
+    const resolvedAutoRows = resolveResponsiveValue(autoRows, currentBreakpoint)
+    if (resolvedAutoRows) {
+      styles.gridAutoRows = resolvedAutoRows
+    }
+
+    const resolvedAutoColumns = resolveResponsiveValue(autoColumns, currentBreakpoint)
+    if (resolvedAutoColumns) {
+      styles.gridAutoColumns = resolvedAutoColumns
+    }
+
+    const resolvedJustifyItems = resolveResponsiveValue(justifyItems, currentBreakpoint)
+    if (resolvedJustifyItems) {
+      styles.justifyItems = resolvedJustifyItems
+    }
+
+    const resolvedAlignItems = resolveResponsiveValue(alignItems, currentBreakpoint)
+    if (resolvedAlignItems) {
+      styles.alignItems = resolvedAlignItems
+    }
+
+    const resolvedJustifyContent = resolveResponsiveValue(justifyContent, currentBreakpoint)
+    if (resolvedJustifyContent) {
+      styles.justifyContent = resolvedJustifyContent
+    }
+
+    const resolvedAlignContent = resolveResponsiveValue(alignContent, currentBreakpoint)
+    if (resolvedAlignContent) {
+      styles.alignContent = resolvedAlignContent
+    }
+
+    if (aspectRatio) {
+      styles.aspectRatio = aspectRatio
+    }
+
+    return { ...styles, ...style }
   }, [
     columns,
     rows,
@@ -312,6 +339,11 @@ const GridContainer: React.FC<React.ComponentProps<'div'> & GridContainerProps> 
     alignItems,
     justifyContent,
     alignContent,
+    minItemWidth,
+    maxItemWidth,
+    aspectRatio,
+    currentBreakpoint,
+    spacing,
     style,
   ])
 
@@ -322,72 +354,35 @@ const GridContainer: React.FC<React.ComponentProps<'div'> & GridContainerProps> 
       data-grid-container=""
       {...props}
     >
-      {debug && <GridDebugOverlay columns={columns} rows={rows} />}
+      {debug && <GridDebugOverlay />}
       {children}
     </div>
   )
 }
 
-GridContainer.displayName = 'Grid.Container'
-
 /* -------------------------------------------------------------------------------------------------
  * Grid.Item
  * ----------------------------------------------------------------------------------------------- */
+
 export interface GridItemProps extends ComponentPropsWithoutRef<'div'> {
-  /**
-   * Set the column position and span
-   * @example column="1 / 3" or column={{ base: 1, md: "1 / 3" }}
-   */
   column?: ResponsiveProp<GridPlacement>
-  /**
-   * Set the row position and span
-   * @example row="2 / span 2" or row={{ base: 2, md: "2 / span 2" }}
-   */
   row?: ResponsiveProp<GridPlacement>
-  /**
-   * Set the column start position
-   */
   columnStart?: ResponsiveProp<GridPlacement>
-  /**
-   * Set the column end position
-   */
   columnEnd?: ResponsiveProp<GridPlacement>
-  /**
-   * Set the row start position
-   */
   rowStart?: ResponsiveProp<GridPlacement>
-  /**
-   * Set the row end position
-   */
   rowEnd?: ResponsiveProp<GridPlacement>
-  /**
-   * Set the grid area for the item
-   * @example area="header" or area={{ base: "content", lg: "sidebar" }}
-   */
   area?: ResponsiveProp<string>
-  /**
-   * Set the order of the item
-   */
   order?: ResponsiveProp<number>
-  /**
-   * Align the item along the inline (row) axis
-   */
   justifySelf?: ResponsiveProp<GridJustification>
-  /**
-   * Align the item along the block (column) axis
-   */
   alignSelf?: ResponsiveProp<GridAlignment>
-  /**
-   * Children to render within the grid item
-   */
+  span?: ResponsiveProp<number>
+  rowSpan?: ResponsiveProp<number>
+  aspectRatio?: string
+  interactive?: boolean
   children?: ReactNode
 }
 
-/**
- * Grid item component that positions content within a grid.
- * Supports all CSS Grid item properties with responsive capabilities.
- */
-const GridItem: React.FC<React.ComponentProps<'div'> & GridItemProps> = ({
+function GridItem({
   column,
   row,
   columnStart,
@@ -398,26 +393,87 @@ const GridItem: React.FC<React.ComponentProps<'div'> & GridItemProps> = ({
   order,
   justifySelf,
   alignSelf,
+  span,
+  rowSpan,
+  aspectRatio,
+  interactive = false,
   className,
   style,
   children,
   ...props
-}) => {
-  // Generate CSS properties for grid item
-  const itemStyles = useMemo(() => {
-    return {
-      ...generateResponsiveCSS(column, 'grid-column'),
-      ...generateResponsiveCSS(row, 'grid-row'),
-      ...generateResponsiveCSS(columnStart, 'grid-column-start'),
-      ...generateResponsiveCSS(columnEnd, 'grid-column-end'),
-      ...generateResponsiveCSS(rowStart, 'grid-row-start'),
-      ...generateResponsiveCSS(rowEnd, 'grid-row-end'),
-      ...generateResponsiveCSS(area, 'grid-area'),
-      ...generateResponsiveCSS(order, 'order'),
-      ...generateResponsiveCSS(justifySelf, 'justify-self'),
-      ...generateResponsiveCSS(alignSelf, 'align-self'),
-      ...style,
-    } as React.CSSProperties
+}: GridItemProps) {
+  const { debug, currentBreakpoint } = useGrid()
+
+  const itemStyles = useMemo((): CSSProperties => {
+    const styles: CSSProperties = {}
+
+    // Handle span shorthand
+    const resolvedSpan = resolveResponsiveValue(span, currentBreakpoint)
+    if (resolvedSpan) {
+      styles.gridColumn = `span ${resolvedSpan}`
+    }
+
+    const resolvedRowSpan = resolveResponsiveValue(rowSpan, currentBreakpoint)
+    if (resolvedRowSpan) {
+      styles.gridRow = `span ${resolvedRowSpan}`
+    }
+
+    // Handle explicit positioning (overrides span)
+    const resolvedColumn = resolveResponsiveValue(column, currentBreakpoint)
+    if (resolvedColumn) {
+      styles.gridColumn = String(resolvedColumn)
+    }
+
+    const resolvedRow = resolveResponsiveValue(row, currentBreakpoint)
+    if (resolvedRow) {
+      styles.gridRow = String(resolvedRow)
+    }
+
+    const resolvedColumnStart = resolveResponsiveValue(columnStart, currentBreakpoint)
+    if (resolvedColumnStart) {
+      styles.gridColumnStart = String(resolvedColumnStart)
+    }
+
+    const resolvedColumnEnd = resolveResponsiveValue(columnEnd, currentBreakpoint)
+    if (resolvedColumnEnd) {
+      styles.gridColumnEnd = String(resolvedColumnEnd)
+    }
+
+    const resolvedRowStart = resolveResponsiveValue(rowStart, currentBreakpoint)
+    if (resolvedRowStart) {
+      styles.gridRowStart = String(resolvedRowStart)
+    }
+
+    const resolvedRowEnd = resolveResponsiveValue(rowEnd, currentBreakpoint)
+    if (resolvedRowEnd) {
+      styles.gridRowEnd = String(resolvedRowEnd)
+    }
+
+    const resolvedArea = resolveResponsiveValue(area, currentBreakpoint)
+    if (resolvedArea) {
+      styles.gridArea = resolvedArea
+    }
+
+    const resolvedOrder = resolveResponsiveValue(order, currentBreakpoint)
+    if (resolvedOrder) {
+      styles.order = resolvedOrder
+    }
+
+    const resolvedJustifySelf = resolveResponsiveValue(justifySelf, currentBreakpoint)
+    if (resolvedJustifySelf) {
+      styles.justifySelf = resolvedJustifySelf
+    }
+
+    const resolvedAlignSelf = resolveResponsiveValue(alignSelf, currentBreakpoint)
+    if (resolvedAlignSelf) {
+      styles.alignSelf = resolvedAlignSelf
+    }
+
+    if (aspectRatio) {
+      styles.aspectRatio = aspectRatio
+    }
+
+    return { ...styles, ...style }
   }, [
     column,
     row,
@@ -429,14 +485,24 @@ const GridItem: React.FC<React.ComponentProps<'div'> & GridItemProps> = ({
     order,
     justifySelf,
     alignSelf,
+    span,
+    rowSpan,
+    aspectRatio,
+    currentBreakpoint,
     style,
   ])
 
   return (
     <div
-      className={cn('grid-item', className)}
+      className={cn(
+        'grid-item',
+        interactive && 'grid-item-interactive',
+        debug && 'grid-debug',
+        className,
+      )}
       style={itemStyles}
       data-grid-item=""
+      data-interactive={interactive ? '' : undefined}
       {...props}
     >
       {children}
@@ -444,37 +510,20 @@ const GridItem: React.FC<React.ComponentProps<'div'> & GridItemProps> = ({
   )
 }
 
-GridItem.displayName = 'Grid.Item'
-
 /* -------------------------------------------------------------------------------------------------
  * Grid.Area
  * ----------------------------------------------------------------------------------------------- */
+
 export interface GridAreaProps extends ComponentPropsWithoutRef<'div'> {
-  /**
-   * The name of the grid area
-   */
   name: string
-  /**
-   * Children to render within the grid area
-   */
   children?: ReactNode
 }
 
-/**
- * Grid area component for creating named template areas.
- * Simplifies the usage of grid-template-areas.
- */
-const GridArea: React.FC<React.ComponentProps<'div'> & GridAreaProps> = ({
-  name,
-  className,
-  style,
-  children,
-  ...props
-}) => {
-  const areaStyles = useMemo(() => ({
+function GridArea({ name, className, style, children, ...props }: GridAreaProps) {
+  const areaStyles = useMemo((): CSSProperties => ({
     gridArea: name,
     ...style,
-  } as React.CSSProperties), [name, style])
+  }), [name, style])
 
   return (
     <div
@@ -488,142 +537,19 @@ const GridArea: React.FC<React.ComponentProps<'div'> & GridAreaProps> = ({
   )
 }
 
-GridArea.displayName = 'Grid.Area'
-
 /* -------------------------------------------------------------------------------------------------
-* Grid.Debug
-* ----------------------------------------------------------------------------------------------- */
-interface GridDebugOverlayProps {
-  columns?: ResponsiveProp<GridTemplateValue>
-  rows?: ResponsiveProp<GridTemplateValue>
-}
+ * Grid.Stack
+ * ----------------------------------------------------------------------------------------------- */
 
-/**
- * Helper component to visualize grid lines and areas for debugging
- */
-function GridDebugOverlay({ columns, rows }: Readonly<GridDebugOverlayProps>) {
-  const { currentBreakpoint } = useGrid()
-  const [gridLines, setGridLines] = useState<{ cols: number, rows: number }>({ cols: 0, rows: 0 })
-
-  // Parse grid template values to determine number of lines
-  useEffect(() => {
-    const parseTemplateValue = (value: ResponsiveProp<GridTemplateValue> | undefined, bp: Breakpoint): number => {
-      if (value === undefined)
-        return 0
-
-      // Handle responsive object
-      if (typeof value === 'object' && !Array.isArray(value)) {
-        // Type assertion for proper access
-        const responsiveValue = value
-        const bpValue = responsiveValue[bp] || responsiveValue.base
-        if (bpValue === undefined)
-          return 0
-        return parseTemplateValue(bpValue, bp)
-      }
-
-      // At this point, value is a GridTemplateValue
-      // Handle number (repeat(n, 1fr))
-      if (typeof value === 'number') {
-        return value
-      }
-
-      // Handle array
-      if (Array.isArray(value)) {
-        return value.length
-      }
-
-      // Handle string - this is a simplified approach
-      const repeatMatch = /repeat\((\d+)/.exec(value)
-      if (repeatMatch) {
-        return Number.parseInt(repeatMatch[1], 10)
-      }
-
-      // Count the number of spaces + 1 as a rough estimate for explicit tracks
-      return value.split(' ').length
-    }
-
-    // Fix for rows variable being used before declaration
-    const colCount = parseTemplateValue(columns, currentBreakpoint)
-    const rowCount = parseTemplateValue(rows, currentBreakpoint)
-
-    setGridLines({ cols: colCount, rows: rowCount })
-  }, [columns, rows, currentBreakpoint])
-
-  return (
-    <div
-      className="grid-debug-overlay"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        zIndex: 999,
-      } as React.CSSProperties}
-      data-grid-debug=""
-    >
-      {/* Column lines */}
-      {Array.from({ length: gridLines.cols + 1 }).map((_, i) => (
-        <div
-          key={`col-line-${i}`}
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: `${(i / gridLines.cols) * 100}%`,
-            width: '1px',
-            backgroundColor: 'rgba(0, 100, 255, 0.2)',
-            zIndex: 1000,
-          } as React.CSSProperties}
-          data-grid-debug-line="column"
-        />
-      ))}
-
-      {/* Row lines */}
-      {Array.from({ length: gridLines.rows + 1 }).map((_, i) => (
-        <div
-          key={`row-line-${i}`}
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: `${(i / gridLines.rows) * 100}%`,
-            height: '1px',
-            backgroundColor: 'rgba(0, 100, 255, 0.2)',
-            zIndex: 1000,
-          } as React.CSSProperties}
-          data-grid-debug-line="row"
-        />
-      ))}
-    </div>
-  )
-}
-
-/* -------------------------------------------------------------------------------------------------
-* Grid.Stack
-* ----------------------------------------------------------------------------------------------- */
 export interface GridStackProps extends ComponentPropsWithoutRef<'div'> {
-/**
- * Children to stack in the same grid cell
- */
   children?: ReactNode
 }
 
-/**
- * A utility component that stacks children on top of each other
- * in the same grid cell using absolute positioning.
- *
- * Instead of cloning children with modified styles, this component
- * wraps each child in a div with the appropriate positioning.
- */
-const GridStack: React.FC<React.ComponentProps<'div'> & GridStackProps> = ({
-  className,
-  style,
-  children,
-  ...props
-}) => {
-  const stackStyles = useMemo(() => ({
+function GridStack({ className, style, children, ...props }: GridStackProps) {
+  const stackStyles = useMemo((): CSSProperties => ({
     position: 'relative',
     ...style,
-  } as React.CSSProperties), [style])
+  }), [style])
 
   return (
     <div
@@ -632,15 +558,15 @@ const GridStack: React.FC<React.ComponentProps<'div'> & GridStackProps> = ({
       data-grid-stack=""
       {...props}
     >
-      {/* Use a wrapper div for each child instead of cloning */}
       {Array.isArray(children)
         ? children.map((child, index) => (
             <div
-              key={`stack-item-${index}`}
+              key={index}
+              className="grid-stack-item"
               style={{
                 position: 'absolute',
                 inset: 0,
-              } as React.CSSProperties}
+              }}
               data-grid-stack-item=""
             >
               {child}
@@ -648,10 +574,11 @@ const GridStack: React.FC<React.ComponentProps<'div'> & GridStackProps> = ({
           ))
         : children && (
           <div
+            className="grid-stack-item"
             style={{
               position: 'absolute',
               inset: 0,
-            } as React.CSSProperties}
+            }}
             data-grid-stack-item=""
           >
             {children}
@@ -661,96 +588,283 @@ const GridStack: React.FC<React.ComponentProps<'div'> & GridStackProps> = ({
   )
 }
 
-GridStack.displayName = 'Grid.Stack'
-
 /* -------------------------------------------------------------------------------------------------
-* Grid.CSSVariables
-* ----------------------------------------------------------------------------------------------- */
-function GridCSSVariables() {
+ * Grid.AutoGrid
+ * ----------------------------------------------------------------------------------------------- */
+
+export interface GridAutoGridProps extends ComponentPropsWithoutRef<'div'> {
+  minItemWidth?: ResponsiveProp<string>
+  maxItemWidth?: ResponsiveProp<string>
+  gap?: ResponsiveProp<GridGap> | SpacingPreset
+  aspectRatio?: string
+  children?: ReactNode
+}
+
+function GridAutoGrid({
+  minItemWidth = '250px',
+  maxItemWidth = '1fr',
+  gap,
+  aspectRatio,
+  className,
+  style,
+  children,
+  ...props
+}: GridAutoGridProps) {
+  const { currentBreakpoint, spacing } = useGrid()
+
+  const autoGridStyles = useMemo((): CSSProperties => {
+    const resolvedMinWidth = resolveResponsiveValue(minItemWidth, currentBreakpoint) || '250px'
+    const resolvedMaxWidth = resolveResponsiveValue(maxItemWidth, currentBreakpoint) || '1fr'
+
+    let resolvedGap: string
+    if (typeof gap === 'string' && ['none', 'tight', 'standard', 'relaxed', 'wide'].includes(gap)) {
+      resolvedGap = getSpacingValue(gap as SpacingPreset)
+    }
+    else {
+      const gapValue = resolveResponsiveValue(gap as ResponsiveProp<GridGap>, currentBreakpoint)
+      resolvedGap = gapValue ? transformGap(gapValue) : getSpacingValue(spacing)
+    }
+
+    const styles: CSSProperties = {
+      display: 'grid',
+      gridTemplateColumns: `repeat(auto-fit, minmax(${resolvedMinWidth}, ${resolvedMaxWidth}))`,
+      gap: resolvedGap,
+    }
+
+    if (aspectRatio) {
+      styles.aspectRatio = aspectRatio
+    }
+
+    return { ...styles, ...style }
+  }, [minItemWidth, maxItemWidth, gap, aspectRatio, currentBreakpoint, spacing, style])
+
   return (
-    // eslint-disable-next-line react-dom/no-dangerously-set-innerhtml
-    <style dangerouslySetInnerHTML={{
-      __html: `
-      /* CSS to handle responsive props using CSS variables */
-      :root {
-        --grid-current-breakpoint: 'base';
-      }
-
-      @media (min-width: ${BREAKPOINTS.sm}px) {
-        :root {
-          --grid-current-breakpoint: 'sm';
-        }
-      }
-
-      @media (min-width: ${BREAKPOINTS.md}px) {
-        :root {
-          --grid-current-breakpoint: 'md';
-        }
-      }
-
-      @media (min-width: ${BREAKPOINTS.lg}px) {
-        :root {
-          --grid-current-breakpoint: 'lg';
-        }
-      }
-
-      @media (min-width: ${BREAKPOINTS.xl}px) {
-        :root {
-          --grid-current-breakpoint: 'xl';
-        }
-      }
-
-      @media (min-width: ${BREAKPOINTS['2xl']}px) {
-        :root {
-          --grid-current-breakpoint: '2xl';
-        }
-      }
-
-      /* Helper function for responsive variables */
-      @property --grid-selected-value {
-        syntax: "*";
-        initial-value: "";
-        inherits: false;
-      }
-
-      [data-grid-root], [data-grid-container], [data-grid-item], [data-grid-area] {
-        --grid-selected-value: '';
-      }
-
-      /* Debug styles */
-      [data-grid-container].grid-debug {
-        position: relative;
-        outline: 1px dashed rgba(0, 100, 255, 0.3);
-      }
-
-      [data-grid-item].grid-debug {
-        outline: 1px dotted rgba(255, 0, 100, 0.3);
-      }
-    `,
-    }}
-    />
+    <div
+      className={cn('grid-auto-grid', className)}
+      style={autoGridStyles}
+      data-grid-auto=""
+      {...props}
+    >
+      {children}
+    </div>
   )
 }
 
-GridCSSVariables.displayName = 'Grid.CSSVariables'
+/* -------------------------------------------------------------------------------------------------
+ * Grid.Masonry (CSS Grid approximation)
+ * ----------------------------------------------------------------------------------------------- */
+
+export interface GridMasonryProps extends ComponentPropsWithoutRef<'div'> {
+  columns?: ResponsiveProp<number>
+  gap?: ResponsiveProp<GridGap> | SpacingPreset
+  children?: ReactNode
+}
+
+function GridMasonry({
+  columns = { base: 1, sm: 2, md: 3, lg: 4 },
+  gap,
+  className,
+  style,
+  children,
+  ...props
+}: GridMasonryProps) {
+  const { currentBreakpoint, spacing } = useGrid()
+
+  const masonryStyles = useMemo((): CSSProperties => {
+    const resolvedColumns = resolveResponsiveValue(columns, currentBreakpoint) || 1
+
+    let resolvedGap: string
+    if (typeof gap === 'string' && ['none', 'tight', 'standard', 'relaxed', 'wide'].includes(gap)) {
+      resolvedGap = getSpacingValue(gap as SpacingPreset)
+    }
+    else {
+      const gapValue = resolveResponsiveValue(gap as ResponsiveProp<GridGap>, currentBreakpoint)
+      resolvedGap = gapValue ? transformGap(gapValue) : getSpacingValue(spacing)
+    }
+
+    return {
+      display: 'grid',
+      gridTemplateColumns: `repeat(${resolvedColumns}, 1fr)`,
+      gridAutoRows: 'max-content',
+      gap: resolvedGap,
+      ...style,
+    }
+  }, [columns, gap, currentBreakpoint, spacing, style])
+
+  return (
+    <div
+      className={cn('grid-masonry', className)}
+      style={masonryStyles}
+      data-grid-masonry=""
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
 
 /* -------------------------------------------------------------------------------------------------
-* Exports
-* ----------------------------------------------------------------------------------------------- */
+ * Grid.Debug
+ * ----------------------------------------------------------------------------------------------- */
+
+function GridDebugOverlay() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [gridInfo, setGridInfo] = useState<{ columns: number, rows: number }>({ columns: 0, rows: 0 })
+
+  useEffect(() => {
+    const container = containerRef.current?.parentElement
+    if (!container)
+      return
+
+    const updateGridInfo = () => {
+      const computedStyle = window.getComputedStyle(container)
+      const columns = computedStyle.gridTemplateColumns.split(' ').length
+      const rows = computedStyle.gridTemplateRows.split(' ').length || 1
+      setGridInfo({ columns, rows })
+    }
+
+    updateGridInfo()
+
+    const resizeObserver = new ResizeObserver(updateGridInfo)
+    resizeObserver.observe(container)
+
+    return () => resizeObserver.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={containerRef}
+      className="grid-debug-overlay"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 9999,
+      }}
+      data-grid-debug-overlay=""
+    >
+      {/* Column lines */}
+      {Array.from({ length: gridInfo.columns + 1 }, (_, i) => (
+        <div
+          key={`col-${i}`}
+          className="grid-debug-line grid-debug-line-column"
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: `${(i / gridInfo.columns) * 100}%`,
+            width: '1px',
+            backgroundColor: 'rgba(0, 122, 255, 0.3)',
+          }}
+          data-grid-debug-line="column"
+        />
+      ))}
+
+      {/* Row lines */}
+      {Array.from({ length: gridInfo.rows + 1 }, (_, i) => (
+        <div
+          key={`row-${i}`}
+          className="grid-debug-line grid-debug-line-row"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: `${(i / gridInfo.rows) * 100}%`,
+            height: '1px',
+            backgroundColor: 'rgba(0, 122, 255, 0.3)',
+          }}
+          data-grid-debug-line="row"
+        />
+      ))}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Grid.Preset Components
+ * ----------------------------------------------------------------------------------------------- */
+
+// Common layout presets
+export interface GridLayoutProps extends ComponentPropsWithoutRef<'div'> {
+  children?: ReactNode
+}
+
+function GridHoly({ children, ...props }: GridLayoutProps) {
+  return (
+    <GridContainer
+      areas={{
+        base: `"header" "main" "footer"`,
+        md: `"header header" "sidebar main" "footer footer"`,
+      }}
+      rows={{ base: 'auto 1fr auto', md: 'auto 1fr auto' }}
+      columns={{ base: '1fr', md: '250px 1fr' }}
+      {...props}
+    >
+      {children}
+    </GridContainer>
+  )
+}
+
+function GridDashboard({ children, ...props }: GridLayoutProps) {
+  return (
+    <GridContainer
+      areas={{
+        base: `"nav" "main"`,
+        lg: `"nav main"`,
+      }}
+      rows={{ base: 'auto 1fr', lg: '1fr' }}
+      columns={{ base: '1fr', lg: '250px 1fr' }}
+      {...props}
+    >
+      {children}
+    </GridContainer>
+  )
+}
+
+function GridCards({ children, ...props }: GridLayoutProps) {
+  return (
+    <GridAutoGrid
+      minItemWidth={{ base: '280px', md: '320px' }}
+      gap="standard"
+      {...props}
+    >
+      {children}
+    </GridAutoGrid>
+  )
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Display Names
+ * ----------------------------------------------------------------------------------------------- */
+
+GridRoot.displayName = 'Grid.Root'
+GridContainer.displayName = 'Grid.Container'
+GridItem.displayName = 'Grid.Item'
+GridArea.displayName = 'Grid.Area'
+GridStack.displayName = 'Grid.Stack'
+GridAutoGrid.displayName = 'Grid.AutoGrid'
+GridMasonry.displayName = 'Grid.Masonry'
+GridHoly.displayName = 'Grid.Holy'
+GridDashboard.displayName = 'Grid.Dashboard'
+GridCards.displayName = 'Grid.Cards'
+
+/* -------------------------------------------------------------------------------------------------
+ * Exports
+ * ----------------------------------------------------------------------------------------------- */
+
 export const Grid = {
   Root: GridRoot,
   Container: GridContainer,
   Item: GridItem,
   Area: GridArea,
   Stack: GridStack,
-  CSSVariables: GridCSSVariables,
+  AutoGrid: GridAutoGrid,
+  Masonry: GridMasonry,
+
+  // Layout presets
+  Holy: GridHoly,
+  Dashboard: GridDashboard,
+  Cards: GridCards,
 }
 
-// Also export hooks and utilities for advanced usage
-export {
-  generateResponsiveCSS,
-  transformGap,
-  transformGridTemplate,
-  useBreakpoint,
-  useGrid,
-}
+export { resolveResponsiveValue, useBreakpoint, useGrid }
