@@ -1,73 +1,120 @@
 'use client'
 
-import { useState } from 'react'
-import { Grid } from '../components/grid'
+import React, { useState } from 'react'
+import { Grid as BaseGrid } from '../components/grid'
+
+type GridContainerProps = React.ComponentProps<typeof BaseGrid.Container>
+
+function Holy(p: GridContainerProps) {
+  const { children, ...rest } = p
+  return (
+    <BaseGrid.Container
+      gap="standard"
+      areas={{
+        base: `
+          "header"
+          "main"
+          "sidebar"
+          "footer"
+        `,
+        md: `
+          "header header"
+          "main   sidebar"
+          "footer footer"
+        `,
+      }}
+      rows={{ base: 'auto 1fr auto auto', md: 'auto 1fr auto' }}
+      columns={{ base: '1fr', md: '3fr 1fr' }}
+      {...rest}
+    >
+      {children}
+    </BaseGrid.Container>
+  )
+}
+
+function Dashboard(p: GridContainerProps) {
+  const { children, ...rest } = p
+  return (
+    <BaseGrid.Container
+      gap="standard"
+      areas={{
+        base: `
+          "nav"
+          "main"
+        `,
+        md: `
+          "nav main"
+        `,
+      }}
+      rows={{ base: 'auto 1fr', md: '1fr' }}
+      columns={{ base: '1fr', md: '240px 1fr' }}
+      {...rest}
+    >
+      {children}
+    </BaseGrid.Container>
+  )
+}
+
+const Grid = { ...BaseGrid, Holy, Dashboard }
 
 export default function GridExamplesPage() {
-  const [debugMode, setDebugMode] = useState(false)
   const [currentSpacing, setCurrentSpacing] = useState<'none' | 'tight' | 'standard' | 'relaxed' | 'wide'>('standard')
 
-  return (
-    <div className="grid-examples-page">
-      {/* Header */}
-      <header className="page-header">
-        <div className="container">
-          {/* Controls */}
-          <div className="controls">
-            <label>
-              <input
-                type="checkbox"
-                checked={debugMode}
-                onChange={e => setDebugMode(e.target.checked)}
-              />
-              Debug Mode
-            </label>
+  const card =
+    'flex items-center justify-center rounded-xl border border-border bg-card p-4 text-sm text-card-foreground min-h-[56px] transition-colors hover:bg-card/90 dark:hover:bg-card/80'
+  const area =
+    'flex items-center justify-center rounded-xl border border-border bg-surface p-4 text-sm text-surface-foreground'
+  const sectionWrap =
+    'rounded-2xl border border-border bg-surface p-4 sm:p-6'
 
-            <label>
-              Spacing:
-              <select
-                value={currentSpacing}
-                onChange={e => setCurrentSpacing(e.target.value as any)}
-              >
-                <option value="none">None</option>
-                <option value="tight">Tight</option>
-                <option value="standard">Standard</option>
-                <option value="relaxed">Relaxed</option>
-                <option value="wide">Wide</option>
-              </select>
-            </label>
+  return (
+    <div className="min-h-screen bg-background text-foreground antialiased">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold tracking-tight sm:text-2xl">Grid</h1>
+            <div className="flex items-center gap-4">
+              <label className="text-sm text-muted-foreground">
+                <span className="mr-2">Spacing</span>
+                <select
+                  className="rounded-md border border-input bg-input/50 px-3 py-2 text-foreground outline-none ring-ring/0 focus-visible:ring-2"
+                  value={currentSpacing}
+                  onChange={e => setCurrentSpacing(e.target.value as any)}
+                >
+                  <option value="none">None</option>
+                  <option value="tight">Tight</option>
+                  <option value="standard">Standard</option>
+                  <option value="relaxed">Relaxed</option>
+                  <option value="wide">Wide</option>
+                </select>
+              </label>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="examples-content">
-        {/* Basic Grid */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Basic Grid</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
+      <main className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Basic Grid</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
               <Grid.Container columns={3}>
-                <Grid.Item className="demo-item">Item 1</Grid.Item>
-                <Grid.Item className="demo-item">Item 2</Grid.Item>
-                <Grid.Item className="demo-item">Item 3</Grid.Item>
+                <Grid.Item className={card}>Item 1</Grid.Item>
+                <Grid.Item className={card}>Item 2</Grid.Item>
+                <Grid.Item className={card}>Item 3</Grid.Item>
               </Grid.Container>
             </Grid.Root>
           </div>
         </section>
 
-        {/* Responsive Grid */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Responsive Grid</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Responsive Grid</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
               <Grid.Container columns={{ base: 1, sm: 2, md: 3, lg: 4 }}>
                 {Array.from({ length: 8 }, (_, i) => (
-                  <Grid.Item key={i} className="demo-item">
-                    Card
-                    {' '}
-                    {i + 1}
+                  <Grid.Item key={i} className={card}>
+                    Card {i + 1}
                   </Grid.Item>
                 ))}
               </Grid.Container>
@@ -75,231 +122,160 @@ export default function GridExamplesPage() {
           </div>
         </section>
 
-        {/* Spanning Items */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Spanning Items</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Spanning Items</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
               <Grid.Container columns={4}>
-                <Grid.Item span={2} className="demo-item">Span 2 columns</Grid.Item>
-                <Grid.Item className="demo-item">Regular</Grid.Item>
-                <Grid.Item className="demo-item">Regular</Grid.Item>
-                <Grid.Item span={3} className="demo-item">Span 3 columns</Grid.Item>
-                <Grid.Item className="demo-item">Regular</Grid.Item>
+                <Grid.Item span={2} className={card}>Span 2 columns</Grid.Item>
+                <Grid.Item className={card}>Regular</Grid.Item>
+                <Grid.Item className={card}>Regular</Grid.Item>
+                <Grid.Item span={3} className={card}>Span 3 columns</Grid.Item>
+                <Grid.Item className={card}>Regular</Grid.Item>
               </Grid.Container>
             </Grid.Root>
           </div>
         </section>
 
-        {/* Auto Grid */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Auto-Fitting Grid</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
+        {/* <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Auto-Fitting Grid</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
               <Grid.AutoGrid minItemWidth="200px">
                 {Array.from({ length: 6 }, (_, i) => (
-                  <Grid.Item key={i} className="demo-item">
-                    Auto Item
-                    {' '}
-                    {i + 1}
+                  <Grid.Item key={i} className={card}>
+                    Auto Item {i + 1}
                   </Grid.Item>
                 ))}
               </Grid.AutoGrid>
             </Grid.Root>
           </div>
-        </section>
+        </section> */}
 
-        {/* Holy Grail Layout */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Holy Grail Layout</h2>
-
-            <div className="layout-demo">
-              <Grid.Root debug={debugMode} spacing={currentSpacing}>
-                <Grid.Holy>
-                  <Grid.Area name="header" className="demo-area">Header</Grid.Area>
-                  <Grid.Area name="sidebar" className="demo-area">Sidebar</Grid.Area>
-                  <Grid.Area name="main" className="demo-area">Main Content</Grid.Area>
-                  <Grid.Area name="footer" className="demo-area">Footer</Grid.Area>
-                </Grid.Holy>
-              </Grid.Root>
-            </div>
-          </div>
-        </section>
-
-        {/* Dashboard Layout */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Dashboard Layout</h2>
-
-            <div className="layout-demo">
-              <Grid.Root debug={debugMode} spacing={currentSpacing}>
-                <Grid.Dashboard>
-                  <Grid.Area name="nav" className="demo-area">Navigation</Grid.Area>
-                  <Grid.Area name="main" className="demo-area">
-                    <Grid.Container columns={{ base: 1, md: 2, lg: 3 }}>
-                      <Grid.Item className="demo-item">Metric 1</Grid.Item>
-                      <Grid.Item className="demo-item">Metric 2</Grid.Item>
-                      <Grid.Item className="demo-item">Metric 3</Grid.Item>
-                    </Grid.Container>
-                  </Grid.Area>
-                </Grid.Dashboard>
-              </Grid.Root>
-            </div>
-          </div>
-        </section>
-
-        {/* Complex Layout with Areas */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Complex Layout with Named Areas</h2>
-
-            <div className="layout-demo">
-              <Grid.Root debug={debugMode} spacing={currentSpacing}>
-                <Grid.Container
-                  areas={{
-                    base: `
-                      "header"
-                      "hero"
-                      "content"
-                      "sidebar"
-                      "footer"
-                    `,
-                    md: `
-                      "header header"
-                      "hero hero"
-                      "content sidebar"
-                      "footer footer"
-                    `,
-                    lg: `
-                      "header header header"
-                      "hero hero sidebar"
-                      "content content sidebar"
-                      "footer footer footer"
-                    `,
-                  }}
-                  rows={{
-                    base: 'auto auto 1fr auto auto',
-                    md: 'auto auto 1fr auto',
-                    lg: 'auto 200px 1fr auto',
-                  }}
-                  columns={{
-                    base: '1fr',
-                    md: '2fr 1fr',
-                    lg: '1fr 1fr 300px',
-                  }}
-                >
-                  <Grid.Area name="header" className="demo-area">Header</Grid.Area>
-                  <Grid.Area name="hero" className="demo-area">Hero Section</Grid.Area>
-                  <Grid.Area name="content" className="demo-area">Main Content</Grid.Area>
-                  <Grid.Area name="sidebar" className="demo-area">Sidebar</Grid.Area>
-                  <Grid.Area name="footer" className="demo-area">Footer</Grid.Area>
-                </Grid.Container>
-              </Grid.Root>
-            </div>
-          </div>
-        </section>
-
-        {/* Masonry Layout */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Masonry-Style Layout</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
-              <Grid.Masonry columns={{ base: 1, sm: 2, md: 3, lg: 4 }}>
-                {[120, 180, 100, 220, 160, 140, 200, 130].map((height, i) => (
-                  <Grid.Item key={i} className="demo-item" style={{ height: `${height}px` }}>
-                    Item
-                    {' '}
-                    {i + 1}
-                    {' '}
-                    (
-                    {height}
-                    px)
-                  </Grid.Item>
-                ))}
-              </Grid.Masonry>
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Holy Grail Layout</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
+              <Grid.Holy>
+                <Grid.Area name="header" className={`${area} border-l-2 border-l-primary`}>Header</Grid.Area>
+                <Grid.Area name="sidebar" className={`${area} border-l-2 border-l-accent`}>Sidebar</Grid.Area>
+                <Grid.Area name="main" className={area}>Main Content</Grid.Area>
+                <Grid.Area name="footer" className={area}>Footer</Grid.Area>
+              </Grid.Holy>
             </Grid.Root>
           </div>
         </section>
 
-        {/* Stacked Items */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Stacked Items</h2>
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Dashboard Layout</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
+              <Grid.Dashboard>
+                <Grid.Area name="nav" className={`${area} border-l-2 border-l-secondary`}>Navigation</Grid.Area>
+                <Grid.Area name="main" className={area}>
+                  <Grid.Container columns={{ base: 1, md: 2, lg: 3 }}>
+                    <Grid.Item className={card}>Metric 1</Grid.Item>
+                    <Grid.Item className={card}>Metric 2</Grid.Item>
+                    <Grid.Item className={card}>Metric 3</Grid.Item>
+                  </Grid.Container>
+                </Grid.Area>
+              </Grid.Dashboard>
+            </Grid.Root>
+          </div>
+        </section>
 
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
-              <Grid.Container columns={{ base: 1, md: 2 }}>
-                <Grid.Stack className="demo-stack">
-                  <div className="stack-layer background">Background Layer</div>
-                  <div className="stack-layer overlay">Overlay Layer</div>
-                </Grid.Stack>
-                <Grid.Item className="demo-item">Regular Item</Grid.Item>
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Complex Layout with Named Areas</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
+              <Grid.Container
+                areas={{
+                  base: `
+                    "header"
+                    "hero"
+                    "content"
+                    "sidebar"
+                    "footer"
+                  `,
+                  md: `
+                    "header header"
+                    "hero   hero"
+                    "content sidebar"
+                    "footer footer"
+                  `,
+                  lg: `
+                    "header header header"
+                    "hero   hero   sidebar"
+                    "content content sidebar"
+                    "footer footer footer"
+                  `,
+                }}
+                rows={{
+                  base: 'auto auto 1fr auto auto',
+                  md: 'auto auto 1fr auto',
+                  lg: 'auto 200px 1fr auto',
+                }}
+                columns={{
+                  base: '1fr',
+                  md: '2fr 1fr',
+                  lg: '1fr 1fr 300px',
+                }}
+              >
+                <Grid.Area name="header" className={`${area} border-l-2 border-l-primary`}>Header</Grid.Area>
+                <Grid.Area name="hero" className={area}>Hero Section</Grid.Area>
+                <Grid.Area name="content" className={area}>Main Content</Grid.Area>
+                <Grid.Area name="sidebar" className={`${area} border-l-2 border-l-accent`}>Sidebar</Grid.Area>
+                <Grid.Area name="footer" className={area}>Footer</Grid.Area>
               </Grid.Container>
             </Grid.Root>
           </div>
         </section>
-
-        {/* Interactive Grid */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Interactive Grid</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
+{/*
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Interactive Grid</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
               <Grid.Container columns={{ base: 2, md: 3, lg: 4 }}>
                 {Array.from({ length: 8 }, (_, i) => (
-                  <Grid.Item key={i} interactive className="demo-item">
-                    Interactive
-                    {' '}
-                    {i + 1}
+                  <Grid.Item key={i} interactive className={`${card} shadow-sm`}>
+                    Interactive {i + 1}
                   </Grid.Item>
                 ))}
               </Grid.Container>
             </Grid.Root>
           </div>
-        </section>
+        </section> */}
 
-        {/* Nested Grids */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Nested Grids</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Nested Grids</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
               <Grid.Container columns={{ base: 1, lg: 2 }}>
-                <Grid.Item className="demo-item">
-                  <h3>Nested Grid Container</h3>
+                <Grid.Item className={card}>
+                  <div className="mb-3 text-sm font-medium">Nested Grid Container</div>
                   <Grid.Container columns={2} gap="tight">
-                    <Grid.Item className="demo-item nested">Nested 1</Grid.Item>
-                    <Grid.Item className="demo-item nested">Nested 2</Grid.Item>
-                    <Grid.Item span={2} className="demo-item nested">Nested Wide</Grid.Item>
+                    <Grid.Item className={card}>Nested 1</Grid.Item>
+                    <Grid.Item className={card}>Nested 2</Grid.Item>
+                    <Grid.Item span={2} className={card}>Nested Wide</Grid.Item>
                   </Grid.Container>
                 </Grid.Item>
-                <Grid.Item className="demo-item">Regular Item</Grid.Item>
+                <Grid.Item className={card}>Regular Item</Grid.Item>
               </Grid.Container>
             </Grid.Root>
           </div>
         </section>
 
-        {/* Advanced Responsive */}
-        <section className="example-section">
-          <div className="container">
-            <h2>Advanced Responsive Patterns</h2>
-
-            <Grid.Root debug={debugMode} spacing={currentSpacing}>
+        <section>
+          <h2 className="mb-4 border-b border-border pb-2 text-base font-semibold tracking-tight">Responsive Patterns</h2>
+          <div className={sectionWrap}>
+            <Grid.Root spacing={currentSpacing}>
               <Grid.Container columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 6 }}>
-                <Grid.Item
-                  span={{ base: 1, sm: 2, md: 1, lg: 2, xl: 2 }}
-                  className="demo-item"
-                >
+                <Grid.Item span={{ base: 1, sm: 2, md: 1, lg: 2, xl: 2 }} className={card}>
                   Responsive Spanning
                 </Grid.Item>
                 {Array.from({ length: 10 }, (_, i) => (
-                  <Grid.Item key={i} className="demo-item">
-                    Item
-                    {' '}
-                    {i + 2}
+                  <Grid.Item key={i} className={card}>
+                    Item {i + 2}
                   </Grid.Item>
                 ))}
               </Grid.Container>
