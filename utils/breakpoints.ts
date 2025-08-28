@@ -5,10 +5,13 @@ export const BREAKPOINTS = {
   lg: 1024,
   xl: 1280,
   '2xl': 1536,
-} as const;
+} as const
 
 export type Breakpoint = keyof typeof BREAKPOINTS
 export type ResponsiveProp<T> = T | Partial<Record<Breakpoint, T>>
+
+export const BP_ORDER_ASC: Breakpoint[] = ['base', 'sm', 'md', 'lg', 'xl', '2xl']
+export const BP_ORDER_DESC: Breakpoint[] = [...BP_ORDER_ASC].reverse()
 
 export function pickBp(w: number): Breakpoint {
   const arr = Object.entries(BREAKPOINTS) as [Breakpoint, number][]

@@ -4,8 +4,9 @@ import type { Breakpoint, ResponsiveProp } from './breakpoints'
 export type GridColumns = number | 'auto-fit' | 'auto-fill' | string | (string | number)[]
 export type GridRows = number | 'auto' | string | (string | number)[]
 export type GridGap = number | string
-export type GridAlignment = 'start' | 'end' | 'center' | 'stretch' | 'baseline'
-export type GridJustification =
+
+export type GridSelfAlignment = 'start' | 'end' | 'center' | 'stretch' | 'baseline'
+export type GridContentDistribution =
   | 'start'
   | 'end'
   | 'center'
@@ -13,6 +14,7 @@ export type GridJustification =
   | 'space-between'
   | 'space-around'
   | 'space-evenly'
+
 export type GridAutoFlow = 'row' | 'column' | 'dense' | 'row dense' | 'column dense'
 export type GridPlacement =
   | number
@@ -33,10 +35,10 @@ export interface ContainerIn {
   autoFlow?: ResponsiveProp<GridAutoFlow>
   autoRows?: ResponsiveProp<string>
   autoColumns?: ResponsiveProp<string>
-  justifyItems?: ResponsiveProp<GridJustification>
-  alignItems?: ResponsiveProp<GridAlignment>
-  justifyContent?: ResponsiveProp<GridJustification>
-  alignContent?: ResponsiveProp<GridAlignment>
+  justifyItems?: ResponsiveProp<GridSelfAlignment>
+  alignItems?: ResponsiveProp<GridSelfAlignment>
+  justifyContent?: ResponsiveProp<GridContentDistribution>
+  alignContent?: ResponsiveProp<GridContentDistribution>
   minItemWidth?: string
   maxItemWidth?: string
   aspectRatio?: string
@@ -52,27 +54,42 @@ export interface ItemIn {
   rowEnd?: ResponsiveProp<GridPlacement>
   area?: ResponsiveProp<string>
   order?: ResponsiveProp<number>
-  justifySelf?: ResponsiveProp<GridJustification>
-  alignSelf?: ResponsiveProp<GridAlignment>
+  justifySelf?: ResponsiveProp<GridSelfAlignment>
+  alignSelf?: ResponsiveProp<GridSelfAlignment>
   span?: ResponsiveProp<number>
   rowSpan?: ResponsiveProp<number>
   aspectRatio?: string
   style?: CSSProperties
 }
 
+function isResponsiveObject<T>(v: ResponsiveProp<T>): v is Partial<Record<Breakpoint, T>> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+function isSpacingPreset(x: unknown): x is SpacingPreset {
+  return (
+    x === 'none' ||
+    x === 'tight' ||
+    x === 'standard' ||
+    x === 'relaxed' ||
+    x === 'wide'
+  )
+}
+
+const ORDER_DESC: Breakpoint[] = ['2xl', 'xl', 'lg', 'md', 'sm', 'base']
+
 export function resolve<T>(
   v: ResponsiveProp<T> | undefined,
   bp: Breakpoint,
 ): T | undefined {
   if (v === undefined) return undefined
-  if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-    const order: Breakpoint[] = ['2xl', 'xl', 'lg', 'md', 'sm', 'base']
-    const i = order.indexOf(bp)
-    const seq = order.slice(i)
-    const k = seq.find(x => v[x] !== undefined)
+  if (isResponsiveObject<T>(v)) {
+    const i = ORDER_DESC.indexOf(bp)
+    const seq = ORDER_DESC.slice(i)
+    const k = seq.find(key => v[key] !== undefined)
     return k ? v[k] : undefined
   }
-  return v as T
+  return v
 }
 
 export function cols(v: GridColumns): string {
@@ -106,14 +123,22 @@ export function space(p: SpacingPreset): string {
 }
 
 export function gapVal(
+  g: SpacingPreset | undefined,
+  bp: Breakpoint,
+  sp: SpacingPreset,
+): string
+export function gapVal(
+  g: ResponsiveProp<GridGap> | undefined,
+  bp: Breakpoint,
+  sp: SpacingPreset,
+): string
+export function gapVal(
   g: ResponsiveProp<GridGap> | SpacingPreset | undefined,
   bp: Breakpoint,
   sp: SpacingPreset,
 ): string {
-  const presets: SpacingPreset[] = ['none', 'tight', 'standard', 'relaxed', 'wide']
-  const isPreset = typeof g === 'string' && presets.includes(g as SpacingPreset)
-  if (isPreset) return space(g as SpacingPreset)
-  const v = resolve(g as ResponsiveProp<GridGap>, bp)
+  if (isSpacingPreset(g)) return space(g)
+  const v = resolve(g, bp)
   if (v !== undefined) return gap(v)
   return space(sp)
 }
@@ -176,11 +201,11 @@ export function containerStyle(
 export function itemStyle(p: ItemIn, bp: Breakpoint): CSSProperties {
   const st: CSSProperties = {}
 
-  const sp = resolve(p.span, bp)
-  if (sp) st.gridColumn = `span ${sp}`
+  const spanCols = resolve(p.span, bp)
+  if (spanCols) st.gridColumn = `span ${spanCols}`
 
-  const rsp = resolve(p.rowSpan, bp)
-  if (rsp) st.gridRow = `span ${rsp}`
+  const spanRows = resolve(p.rowSpan, bp)
+  if (spanRows) st.gridRow = `span ${spanRows}`
 
   const c = resolve(p.column, bp)
   if (c) st.gridColumn = String(c)

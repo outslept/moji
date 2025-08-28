@@ -18,3 +18,7 @@
 .fadeIn { animation: fadeIn .3s cubic-bezier(.4,0,.2,1) }
 .slideUp { animation: slideUp .3s cubic-bezier(.4,0,.2,1) }
 .scaleIn { animation: scaleIn .3s cubic-bezier(.4,0,.2,1) }
+
+@media (prefers-reduced-motion: reduce) {
+  .fadeIn, .slideUp, .scaleIn { animation: none !important }
+}
