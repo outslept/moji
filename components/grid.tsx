@@ -446,51 +446,6 @@ function GridDebugOverlay() {
 }
 
 /* -------------------------------------------------------------------------------------------------
- * Presets
- * ----------------------------------------------------------------------------------------------- */
-
-export interface GridLayoutProps extends ComponentPropsWithoutRef<'div'> {
-  children?: ReactNode
-}
-
-function GridHoly(p: GridLayoutProps) {
-  return (
-    <GridContainer
-      areas={{
-        base: `"header" "main" "footer"`,
-        md: `"header header" "sidebar main" "footer footer"`,
-      }}
-      rows={{ base: 'auto 1fr auto', md: 'auto 1fr auto' }}
-      columns={{ base: '1fr', md: '250px 1fr' }}
-      {...p}
-    >
-      {p.children}
-    </GridContainer>
-  )
-}
-
-function GridDashboard(p: GridLayoutProps) {
-  return (
-    <GridContainer
-      areas={{ base: `"nav" "main"`, lg: `"nav main"` }}
-      rows={{ base: 'auto 1fr', lg: '1fr' }}
-      columns={{ base: '1fr', lg: '250px 1fr' }}
-      {...p}
-    >
-      {p.children}
-    </GridContainer>
-  )
-}
-
-function GridCards(p: GridLayoutProps) {
-  return (
-    <GridAutoGrid minItemWidth={{ base: '280px', md: '320px' }} gap="standard" {...p}>
-      {p.children}
-    </GridAutoGrid>
-  )
-}
-
-/* -------------------------------------------------------------------------------------------------
  * Exports
  * ----------------------------------------------------------------------------------------------- */
 
@@ -502,8 +457,4 @@ export const Grid = {
   Stack: GridStack,
   AutoGrid: GridAutoGrid,
   Masonry: GridMasonry,
-
-  Holy: GridHoly,
-  Dashboard: GridDashboard,
-  Cards: GridCards,
 }
