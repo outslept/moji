@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Grid } from '../components/grid'
-import './grid-examples.scss'
 
 export default function GridExamplesPage() {
   const [debugMode, setDebugMode] = useState(false)

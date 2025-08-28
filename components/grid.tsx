@@ -1,152 +1,75 @@
 'use client'
 
-import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react'
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { cn } from '../lib/utils'
+import type {
+  ComponentPropsWithoutRef,
+  CSSProperties,
+  ReactNode,
+} from 'react'
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  Children,
+  forwardRef,
+} from 'react'
+import { cn } from '../utils/cn'
+import s from './grid.module.css'
 
-/* -------------------------------------------------------------------------------------------------
- * Constants & Types
- * ----------------------------------------------------------------------------------------------- */
-
-export const BREAKPOINTS = {
-  'base': 0,
-  'sm': 640,
-  'md': 768,
-  'lg': 1024,
-  'xl': 1280,
-  '2xl': 1536,
-} as const
-
-export type Breakpoint = keyof typeof BREAKPOINTS
-export type ResponsiveProp<T> = T | Partial<Record<Breakpoint, T>>
-
-// Grid template types
-export type GridColumns = number | 'auto-fit' | 'auto-fill' | string | (string | number)[]
-export type GridRows = number | 'auto' | string | (string | number)[]
-export type GridGap = number | string
-export type GridAlignment = 'start' | 'end' | 'center' | 'stretch' | 'baseline'
-export type GridJustification = 'start' | 'end' | 'center' | 'stretch' | 'space-between' | 'space-around' | 'space-evenly'
-export type GridAutoFlow = 'row' | 'column' | 'dense' | 'row dense' | 'column dense'
-export type GridPlacement = number | 'auto' | `span ${number}` | `${number} / ${number}` | `${number} / span ${number}`
-
-// Spacing presets
-export type SpacingPreset = 'none' | 'tight' | 'standard' | 'relaxed' | 'wide'
+import {
+  type Breakpoint,
+  type ResponsiveProp,
+  pickBp,
+} from '../utils/breakpoints'
+import {
+  type GridColumns,
+  type GridRows,
+  type GridGap,
+  type GridAlignment,
+  type GridJustification,
+  type GridAutoFlow,
+  type GridPlacement,
+  type SpacingPreset,
+  containerStyle,
+  itemStyle,
+} from '../utils/styles'
+import { readGrid } from '../utils/debug'
 
 /* -------------------------------------------------------------------------------------------------
  * Context
  * ----------------------------------------------------------------------------------------------- */
 
-interface GridContextValue {
+interface CtxValue {
   debug: boolean
-  currentBreakpoint: Breakpoint
-  spacing: SpacingPreset
+  bp: Breakpoint
+  space: SpacingPreset
 }
 
-const GridContext = createContext<GridContextValue | null>(null)
+const Ctx = createContext<CtxValue | null>(null)
 
-function useGrid() {
-  const context = useContext(GridContext)
-  if (!context) {
-    throw new Error('Grid components must be used within Grid.Root')
-  }
-  return context
+export function useGrid() {
+  const v = useContext(Ctx)
+  if (!v) throw new Error('Grid components must be used within Grid.Root')
+  return v
 }
 
 /* -------------------------------------------------------------------------------------------------
  * Hooks
  * ----------------------------------------------------------------------------------------------- */
 
-function useBreakpoint(): Breakpoint {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>('base')
+export function useBreakpoint(): Breakpoint {
+  const [bp, setBp] = useState<Breakpoint>('base')
 
   useEffect(() => {
-    const updateBreakpoint = () => {
-      const width = window.innerWidth
-      const entries = Object.entries(BREAKPOINTS) as [Breakpoint, number][]
-      const current = entries
-        .filter(([, value]) => width >= value)
-        .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'base'
-      setBreakpoint(current)
-    }
-
-    updateBreakpoint()
-    window.addEventListener('resize', updateBreakpoint)
-    return () => window.removeEventListener('resize', updateBreakpoint)
+    const pick = () => setBp(pickBp(window.innerWidth))
+    pick()
+    window.addEventListener('resize', pick)
+    return () => window.removeEventListener('resize', pick)
   }, [])
 
-  return breakpoint
-}
-
-/* -------------------------------------------------------------------------------------------------
- * Utilities
- * ----------------------------------------------------------------------------------------------- */
-
-function resolveResponsiveValue<T>(
-  value: ResponsiveProp<T> | undefined,
-  currentBreakpoint: Breakpoint,
-): T | undefined {
-  if (value === undefined)
-    return undefined
-
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    const breakpoints: Breakpoint[] = ['2xl', 'xl', 'lg', 'md', 'sm', 'base']
-    const currentIndex = breakpoints.indexOf(currentBreakpoint)
-
-    // Find the closest defined value at or below current breakpoint
-    for (let i = currentIndex; i < breakpoints.length; i++) {
-      const bp = breakpoints[i]
-      if (value[bp] !== undefined) {
-        return value[bp]
-      }
-    }
-    return undefined
-  }
-
-  return value as T
-}
-
-function transformColumns(value: GridColumns): string {
-  if (typeof value === 'number') {
-    return `repeat(${value}, 1fr)`
-  }
-  if (value === 'auto-fit') {
-    return 'repeat(auto-fit, minmax(250px, 1fr))'
-  }
-  if (value === 'auto-fill') {
-    return 'repeat(auto-fill, minmax(250px, 1fr))'
-  }
-  if (Array.isArray(value)) {
-    return value.map(v => typeof v === 'number' ? `${v}fr` : v).join(' ')
-  }
-  return value
-}
-
-function transformRows(value: GridRows): string {
-  if (typeof value === 'number') {
-    return `repeat(${value}, 1fr)`
-  }
-  if (value === 'auto') {
-    return 'auto'
-  }
-  if (Array.isArray(value)) {
-    return value.map(v => typeof v === 'number' ? `${v}fr` : v).join(' ')
-  }
-  return value
-}
-
-function transformGap(value: GridGap): string {
-  return typeof value === 'number' ? `${value}px` : value
-}
-
-function getSpacingValue(preset: SpacingPreset): string {
-  const spacingMap: Record<SpacingPreset, string> = {
-    none: '0',
-    tight: '8px',
-    standard: '16px',
-    relaxed: '24px',
-    wide: '32px',
-  }
-  return spacingMap[preset]
+  return bp
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -159,35 +82,36 @@ export interface GridRootProps extends ComponentPropsWithoutRef<'div'> {
   children?: ReactNode
 }
 
-function GridRoot({
-  debug = false,
-  spacing = 'standard',
-  children,
-  className,
-  ...props
-}: GridRootProps) {
-  const currentBreakpoint = useBreakpoint()
-
-  const contextValue = useMemo(() => ({
-    debug,
-    currentBreakpoint,
-    spacing,
-  }), [debug, currentBreakpoint, spacing])
+const GridRoot = forwardRef<HTMLDivElement, GridRootProps>((p, ref) => {
+  const bp = useBreakpoint()
+  const v = useMemo(
+    () => ({
+      debug: p.debug ?? false,
+      bp,
+      space: p.spacing ?? 'standard',
+    }),
+    [p.debug, p.spacing, bp],
+  )
 
   return (
-    <GridContext value={contextValue}>
+    <Ctx.Provider value={v}>
       <div
-        className={cn('grid-root', className)}
+        ref={ref}
+        className={cn(
+          'font-sans text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 transition-colors duration-200',
+          p.className,
+        )}
         data-grid-root=""
-        data-breakpoint={currentBreakpoint}
-        data-debug={debug ? '' : undefined}
-        {...props}
+        data-breakpoint={bp}
+        data-debug={v.debug ? '' : undefined}
+        {...p}
       >
-        {children}
+        {p.children}
       </div>
-    </GridContext>
+    </Ctx.Provider>
   )
-}
+})
+GridRoot.displayName = 'Grid.Root'
 
 /* -------------------------------------------------------------------------------------------------
  * Grid.Container
@@ -213,152 +137,53 @@ export interface GridContainerProps extends ComponentPropsWithoutRef<'div'> {
   children?: ReactNode
 }
 
-function GridContainer({
-  columns,
-  rows,
-  areas,
-  gap,
-  columnGap,
-  rowGap,
-  autoFlow,
-  autoRows,
-  autoColumns,
-  justifyItems,
-  alignItems,
-  justifyContent,
-  alignContent,
-  minItemWidth = '250px',
-  maxItemWidth = '1fr',
-  aspectRatio,
-  className,
-  style,
-  children,
-  ...props
-}: GridContainerProps) {
-  const { debug, currentBreakpoint, spacing } = useGrid()
+const GridContainer = forwardRef<HTMLDivElement, GridContainerProps>((p, ref) => {
+  const { debug, bp, space } = useGrid()
 
-  const gridStyles = useMemo((): CSSProperties => {
-    const resolvedColumns = resolveResponsiveValue(columns, currentBreakpoint)
-    const resolvedRows = resolveResponsiveValue(rows, currentBreakpoint)
-    const resolvedAreas = resolveResponsiveValue(areas, currentBreakpoint)
-
-    // Handle gap - can be responsive prop or spacing preset
-    let resolvedGap: string | undefined
-    if (typeof gap === 'string' && ['none', 'tight', 'standard', 'relaxed', 'wide'].includes(gap)) {
-      resolvedGap = getSpacingValue(gap as SpacingPreset)
-    }
-    else {
-      const gapValue = resolveResponsiveValue(gap as ResponsiveProp<GridGap>, currentBreakpoint)
-      resolvedGap = gapValue ? transformGap(gapValue) : getSpacingValue(spacing)
-    }
-
-    const styles: CSSProperties = {
-      display: 'grid',
-      gap: resolvedGap,
-    }
-
-    if (resolvedColumns) {
-      styles.gridTemplateColumns = transformColumns(resolvedColumns)
-    }
-
-    if (resolvedRows) {
-      styles.gridTemplateRows = transformRows(resolvedRows)
-    }
-
-    if (resolvedAreas) {
-      styles.gridTemplateAreas = resolvedAreas
-    }
-
-    // Handle auto-fit/auto-fill with custom sizing
-    if (resolvedColumns === 'auto-fit' || resolvedColumns === 'auto-fill') {
-      styles.gridTemplateColumns = `repeat(${resolvedColumns}, minmax(${minItemWidth}, ${maxItemWidth}))`
-    }
-
-    // Apply other responsive properties
-    const resolvedColumnGap = resolveResponsiveValue(columnGap, currentBreakpoint)
-    if (resolvedColumnGap) {
-      styles.columnGap = transformGap(resolvedColumnGap)
-    }
-
-    const resolvedRowGap = resolveResponsiveValue(rowGap, currentBreakpoint)
-    if (resolvedRowGap) {
-      styles.rowGap = transformGap(resolvedRowGap)
-    }
-
-    const resolvedAutoFlow = resolveResponsiveValue(autoFlow, currentBreakpoint)
-    if (resolvedAutoFlow) {
-      styles.gridAutoFlow = resolvedAutoFlow
-    }
-
-    const resolvedAutoRows = resolveResponsiveValue(autoRows, currentBreakpoint)
-    if (resolvedAutoRows) {
-      styles.gridAutoRows = resolvedAutoRows
-    }
-
-    const resolvedAutoColumns = resolveResponsiveValue(autoColumns, currentBreakpoint)
-    if (resolvedAutoColumns) {
-      styles.gridAutoColumns = resolvedAutoColumns
-    }
-
-    const resolvedJustifyItems = resolveResponsiveValue(justifyItems, currentBreakpoint)
-    if (resolvedJustifyItems) {
-      styles.justifyItems = resolvedJustifyItems
-    }
-
-    const resolvedAlignItems = resolveResponsiveValue(alignItems, currentBreakpoint)
-    if (resolvedAlignItems) {
-      styles.alignItems = resolvedAlignItems
-    }
-
-    const resolvedJustifyContent = resolveResponsiveValue(justifyContent, currentBreakpoint)
-    if (resolvedJustifyContent) {
-      styles.justifyContent = resolvedJustifyContent
-    }
-
-    const resolvedAlignContent = resolveResponsiveValue(alignContent, currentBreakpoint)
-    if (resolvedAlignContent) {
-      styles.alignContent = resolvedAlignContent
-    }
-
-    if (aspectRatio) {
-      styles.aspectRatio = aspectRatio
-    }
-
-    return { ...styles, ...style }
-  }, [
-    columns,
-    rows,
-    areas,
-    gap,
-    columnGap,
-    rowGap,
-    autoFlow,
-    autoRows,
-    autoColumns,
-    justifyItems,
-    alignItems,
-    justifyContent,
-    alignContent,
-    minItemWidth,
-    maxItemWidth,
-    aspectRatio,
-    currentBreakpoint,
-    spacing,
-    style,
-  ])
+  const st = useMemo((): CSSProperties => {
+    return containerStyle(
+      {
+        columns: p.columns,
+        rows: p.rows,
+        areas: p.areas,
+        gap: p.gap,
+        columnGap: p.columnGap,
+        rowGap: p.rowGap,
+        autoFlow: p.autoFlow,
+        autoRows: p.autoRows,
+        autoColumns: p.autoColumns,
+        justifyItems: p.justifyItems,
+        alignItems: p.alignItems,
+        justifyContent: p.justifyContent,
+        alignContent: p.alignContent,
+        minItemWidth: p.minItemWidth,
+        maxItemWidth: p.maxItemWidth,
+        aspectRatio: p.aspectRatio,
+        style: p.style,
+      },
+      bp,
+      space,
+    )
+  }, [p, bp, space])
 
   return (
     <div
-      className={cn('grid-container', debug && 'grid-debug', className)}
-      style={gridStyles}
+      ref={ref}
+      className={cn(
+        'grid relative transition-all duration-200',
+        debug && 'bg-sky-500/5 border-2 border-dashed border-sky-500/40',
+        p.className,
+      )}
+      style={st}
       data-grid-container=""
-      {...props}
+      {...p}
     >
       {debug && <GridDebugOverlay />}
-      {children}
+      {p.children}
     </div>
   )
-}
+})
+GridContainer.displayName = 'Grid.Container'
 
 /* -------------------------------------------------------------------------------------------------
  * Grid.Item
@@ -379,136 +204,59 @@ export interface GridItemProps extends ComponentPropsWithoutRef<'div'> {
   rowSpan?: ResponsiveProp<number>
   aspectRatio?: string
   interactive?: boolean
+  animate?: 'fadeIn' | 'slideUp' | 'scaleIn'
   children?: ReactNode
 }
 
-function GridItem({
-  column,
-  row,
-  columnStart,
-  columnEnd,
-  rowStart,
-  rowEnd,
-  area,
-  order,
-  justifySelf,
-  alignSelf,
-  span,
-  rowSpan,
-  aspectRatio,
-  interactive = false,
-  className,
-  style,
-  children,
-  ...props
-}: GridItemProps) {
-  const { debug, currentBreakpoint } = useGrid()
+const GridItem = forwardRef<HTMLDivElement, GridItemProps>((p, ref) => {
+  const { debug, bp } = useGrid()
 
-  const itemStyles = useMemo((): CSSProperties => {
-    const styles: CSSProperties = {}
+  const st = useMemo((): CSSProperties => {
+    return itemStyle(
+      {
+        column: p.column,
+        row: p.row,
+        columnStart: p.columnStart,
+        columnEnd: p.columnEnd,
+        rowStart: p.rowStart,
+        rowEnd: p.rowEnd,
+        area: p.area,
+        order: p.order,
+        justifySelf: p.justifySelf,
+        alignSelf: p.alignSelf,
+        span: p.span,
+        rowSpan: p.rowSpan,
+        aspectRatio: p.aspectRatio,
+        style: p.style,
+      },
+      bp,
+    )
+  }, [p, bp])
 
-    // Handle span shorthand
-    const resolvedSpan = resolveResponsiveValue(span, currentBreakpoint)
-    if (resolvedSpan) {
-      styles.gridColumn = `span ${resolvedSpan}`
-    }
-
-    const resolvedRowSpan = resolveResponsiveValue(rowSpan, currentBreakpoint)
-    if (resolvedRowSpan) {
-      styles.gridRow = `span ${resolvedRowSpan}`
-    }
-
-    // Handle explicit positioning (overrides span)
-    const resolvedColumn = resolveResponsiveValue(column, currentBreakpoint)
-    if (resolvedColumn) {
-      styles.gridColumn = String(resolvedColumn)
-    }
-
-    const resolvedRow = resolveResponsiveValue(row, currentBreakpoint)
-    if (resolvedRow) {
-      styles.gridRow = String(resolvedRow)
-    }
-
-    const resolvedColumnStart = resolveResponsiveValue(columnStart, currentBreakpoint)
-    if (resolvedColumnStart) {
-      styles.gridColumnStart = String(resolvedColumnStart)
-    }
-
-    const resolvedColumnEnd = resolveResponsiveValue(columnEnd, currentBreakpoint)
-    if (resolvedColumnEnd) {
-      styles.gridColumnEnd = String(resolvedColumnEnd)
-    }
-
-    const resolvedRowStart = resolveResponsiveValue(rowStart, currentBreakpoint)
-    if (resolvedRowStart) {
-      styles.gridRowStart = String(resolvedRowStart)
-    }
-
-    const resolvedRowEnd = resolveResponsiveValue(rowEnd, currentBreakpoint)
-    if (resolvedRowEnd) {
-      styles.gridRowEnd = String(resolvedRowEnd)
-    }
-
-    const resolvedArea = resolveResponsiveValue(area, currentBreakpoint)
-    if (resolvedArea) {
-      styles.gridArea = resolvedArea
-    }
-
-    const resolvedOrder = resolveResponsiveValue(order, currentBreakpoint)
-    if (resolvedOrder) {
-      styles.order = resolvedOrder
-    }
-
-    const resolvedJustifySelf = resolveResponsiveValue(justifySelf, currentBreakpoint)
-    if (resolvedJustifySelf) {
-      styles.justifySelf = resolvedJustifySelf
-    }
-
-    const resolvedAlignSelf = resolveResponsiveValue(alignSelf, currentBreakpoint)
-    if (resolvedAlignSelf) {
-      styles.alignSelf = resolvedAlignSelf
-    }
-
-    if (aspectRatio) {
-      styles.aspectRatio = aspectRatio
-    }
-
-    return { ...styles, ...style }
-  }, [
-    column,
-    row,
-    columnStart,
-    columnEnd,
-    rowStart,
-    rowEnd,
-    area,
-    order,
-    justifySelf,
-    alignSelf,
-    span,
-    rowSpan,
-    aspectRatio,
-    currentBreakpoint,
-    style,
-  ])
+  const anim =
+    p.animate === 'fadeIn' ? s.fadeIn : p.animate === 'slideUp' ? s.slideUp : p.animate === 'scaleIn' ? s.scaleIn : undefined
 
   return (
     <div
+      ref={ref}
       className={cn(
-        'grid-item',
-        interactive && 'grid-item-interactive',
-        debug && 'grid-debug',
-        className,
+        'relative transition will-change-transform',
+        p.interactive &&
+          'cursor-pointer transition-transform transition-shadow duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0',
+        debug && 'bg-rose-500/5 border border-dotted border-sky-500/40',
+        anim,
+        p.className,
       )}
-      style={itemStyles}
+      style={st}
       data-grid-item=""
-      data-interactive={interactive ? '' : undefined}
-      {...props}
+      data-interactive={p.interactive ? '' : undefined}
+      {...p}
     >
-      {children}
+      {p.children}
     </div>
   )
-}
+})
+GridItem.displayName = 'Grid.Item'
 
 /* -------------------------------------------------------------------------------------------------
  * Grid.Area
@@ -519,23 +267,22 @@ export interface GridAreaProps extends ComponentPropsWithoutRef<'div'> {
   children?: ReactNode
 }
 
-function GridArea({ name, className, style, children, ...props }: GridAreaProps) {
-  const areaStyles = useMemo((): CSSProperties => ({
-    gridArea: name,
-    ...style,
-  }), [name, style])
+const GridArea = forwardRef<HTMLDivElement, GridAreaProps>((p, ref) => {
+  const st = useMemo((): CSSProperties => ({ gridArea: p.name, ...p.style }), [p.name, p.style])
 
   return (
     <div
-      className={cn('grid-area', className)}
-      style={areaStyles}
-      data-grid-area={name}
-      {...props}
+      ref={ref}
+      className={cn('relative', p.className)}
+      style={st}
+      data-grid-area={p.name}
+      {...p}
     >
-      {children}
+      {p.children}
     </div>
   )
-}
+})
+GridArea.displayName = 'Grid.Area'
 
 /* -------------------------------------------------------------------------------------------------
  * Grid.Stack
@@ -545,48 +292,27 @@ export interface GridStackProps extends ComponentPropsWithoutRef<'div'> {
   children?: ReactNode
 }
 
-function GridStack({ className, style, children, ...props }: GridStackProps) {
-  const stackStyles = useMemo((): CSSProperties => ({
-    position: 'relative',
-    ...style,
-  }), [style])
+const GridStack = forwardRef<HTMLDivElement, GridStackProps>((p, ref) => {
+  const st = useMemo((): CSSProperties => ({ position: 'relative', ...p.style }), [p.style])
+  const kids = Array.isArray(p.children) ? p.children : p.children ? [p.children] : []
 
   return (
     <div
-      className={cn('grid-stack', className)}
-      style={stackStyles}
+      ref={ref}
+      className={cn('relative', p.className)}
+      style={st}
       data-grid-stack=""
-      {...props}
+      {...p}
     >
-      {Array.isArray(children)
-        ? children.map((child, index) => (
-            <div
-              key={index}
-              className="grid-stack-item"
-              style={{
-                position: 'absolute',
-                inset: 0,
-              }}
-              data-grid-stack-item=""
-            >
-              {child}
-            </div>
-          ))
-        : children && (
-          <div
-            className="grid-stack-item"
-            style={{
-              position: 'absolute',
-              inset: 0,
-            }}
-            data-grid-stack-item=""
-          >
-            {children}
-          </div>
-        )}
+      {Children.map(kids, (n, i) => (
+        <div key={i} className="absolute inset-0" data-grid-stack-item="">
+          {n}
+        </div>
+      ))}
     </div>
   )
-}
+})
+GridStack.displayName = 'Grid.Stack'
 
 /* -------------------------------------------------------------------------------------------------
  * Grid.AutoGrid
@@ -600,58 +326,43 @@ export interface GridAutoGridProps extends ComponentPropsWithoutRef<'div'> {
   children?: ReactNode
 }
 
-function GridAutoGrid({
-  minItemWidth = '250px',
-  maxItemWidth = '1fr',
-  gap,
-  aspectRatio,
-  className,
-  style,
-  children,
-  ...props
-}: GridAutoGridProps) {
-  const { currentBreakpoint, spacing } = useGrid()
+const GridAutoGrid = forwardRef<HTMLDivElement, GridAutoGridProps>((p, ref) => {
+  const { bp, space } = useGrid()
 
-  const autoGridStyles = useMemo((): CSSProperties => {
-    const resolvedMinWidth = resolveResponsiveValue(minItemWidth, currentBreakpoint) || '250px'
-    const resolvedMaxWidth = resolveResponsiveValue(maxItemWidth, currentBreakpoint) || '1fr'
-
-    let resolvedGap: string
-    if (typeof gap === 'string' && ['none', 'tight', 'standard', 'relaxed', 'wide'].includes(gap)) {
-      resolvedGap = getSpacingValue(gap as SpacingPreset)
-    }
-    else {
-      const gapValue = resolveResponsiveValue(gap as ResponsiveProp<GridGap>, currentBreakpoint)
-      resolvedGap = gapValue ? transformGap(gapValue) : getSpacingValue(spacing)
-    }
-
-    const styles: CSSProperties = {
-      display: 'grid',
-      gridTemplateColumns: `repeat(auto-fit, minmax(${resolvedMinWidth}, ${resolvedMaxWidth}))`,
-      gap: resolvedGap,
-    }
-
-    if (aspectRatio) {
-      styles.aspectRatio = aspectRatio
-    }
-
-    return { ...styles, ...style }
-  }, [minItemWidth, maxItemWidth, gap, aspectRatio, currentBreakpoint, spacing, style])
+  const st = useMemo((): CSSProperties => {
+    const min = p.minItemWidth && typeof p.minItemWidth === 'object' ? (p.minItemWidth[bp] ?? p.minItemWidth.base ?? '250px') : (p.minItemWidth ?? '250px')
+    const max = p.maxItemWidth && typeof p.maxItemWidth === 'object' ? (p.maxItemWidth[bp] ?? p.maxItemWidth.base ?? '1fr') : (p.maxItemWidth ?? '1fr')
+    const gIn = { gap: p.gap } as const
+    const stx = containerStyle(
+      {
+        ...gIn,
+        aspectRatio: p.aspectRatio,
+        style: p.style,
+      },
+      bp,
+      space,
+    )
+    stx.display = 'grid'
+    stx.gridTemplateColumns = `repeat(auto-fit, minmax(${min}, ${max}))`
+    return stx
+  }, [p, bp, space])
 
   return (
     <div
-      className={cn('grid-auto-grid', className)}
-      style={autoGridStyles}
+      ref={ref}
+      className={cn('grid', p.className)}
+      style={st}
       data-grid-auto=""
-      {...props}
+      {...p}
     >
-      {children}
+      {p.children}
     </div>
   )
-}
+})
+GridAutoGrid.displayName = 'Grid.AutoGrid'
 
 /* -------------------------------------------------------------------------------------------------
- * Grid.Masonry (CSS Grid approximation)
+ * Grid.Masonry
  * ----------------------------------------------------------------------------------------------- */
 
 export interface GridMasonryProps extends ComponentPropsWithoutRef<'div'> {
@@ -660,119 +371,73 @@ export interface GridMasonryProps extends ComponentPropsWithoutRef<'div'> {
   children?: ReactNode
 }
 
-function GridMasonry({
-  columns = { base: 1, sm: 2, md: 3, lg: 4 },
-  gap,
-  className,
-  style,
-  children,
-  ...props
-}: GridMasonryProps) {
-  const { currentBreakpoint, spacing } = useGrid()
+const GridMasonry = forwardRef<HTMLDivElement, GridMasonryProps>((p, ref) => {
+  const { bp, space } = useGrid()
 
-  const masonryStyles = useMemo((): CSSProperties => {
-    const resolvedColumns = resolveResponsiveValue(columns, currentBreakpoint) || 1
-
-    let resolvedGap: string
-    if (typeof gap === 'string' && ['none', 'tight', 'standard', 'relaxed', 'wide'].includes(gap)) {
-      resolvedGap = getSpacingValue(gap as SpacingPreset)
-    }
-    else {
-      const gapValue = resolveResponsiveValue(gap as ResponsiveProp<GridGap>, currentBreakpoint)
-      resolvedGap = gapValue ? transformGap(gapValue) : getSpacingValue(spacing)
-    }
-
-    return {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${resolvedColumns}, 1fr)`,
-      gridAutoRows: 'max-content',
-      gap: resolvedGap,
-      ...style,
-    }
-  }, [columns, gap, currentBreakpoint, spacing, style])
+  const st = useMemo((): CSSProperties => {
+    const cols = (typeof p.columns === 'object' && p.columns !== null ? (p.columns[bp] ?? p.columns.base) : p.columns) ?? 1
+    const stx = containerStyle({ gap: p.gap, style: p.style }, bp, space)
+    stx.display = 'grid'
+    stx.gridTemplateColumns = `repeat(${cols}, 1fr)`
+    stx.gridAutoRows = 'max-content'
+    return stx
+  }, [p, bp, space])
 
   return (
     <div
-      className={cn('grid-masonry', className)}
-      style={masonryStyles}
+      ref={ref}
+      className={cn('grid', p.className)}
+      style={st}
       data-grid-masonry=""
-      {...props}
+      {...p}
     >
-      {children}
+      {p.children}
     </div>
   )
-}
+})
+GridMasonry.displayName = 'Grid.Masonry'
 
 /* -------------------------------------------------------------------------------------------------
  * Grid.Debug
  * ----------------------------------------------------------------------------------------------- */
 
 function GridDebugOverlay() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [gridInfo, setGridInfo] = useState<{ columns: number, rows: number }>({ columns: 0, rows: 0 })
+  const ref = useRef<HTMLDivElement>(null)
+  const [info, setInfo] = useState<{ columns: number; rows: number }>({ columns: 0, rows: 0 })
 
   useEffect(() => {
-    const container = containerRef.current?.parentElement
-    if (!container)
-      return
+    const el = ref.current?.parentElement
+    if (!el) return
 
-    const updateGridInfo = () => {
-      const computedStyle = window.getComputedStyle(container)
-      const columns = computedStyle.gridTemplateColumns.split(' ').length
-      const rows = computedStyle.gridTemplateRows.split(' ').length || 1
-      setGridInfo({ columns, rows })
+    const upd = () => {
+      const r = readGrid(el)
+      setInfo({ columns: r.cols, rows: r.rows })
     }
 
-    updateGridInfo()
-
-    const resizeObserver = new ResizeObserver(updateGridInfo)
-    resizeObserver.observe(container)
-
-    return () => resizeObserver.disconnect()
+    upd()
+    const ro = new ResizeObserver(upd)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
+  const cols = info.columns > 0 ? info.columns : 1
+  const rows = info.rows > 0 ? info.rows : 1
+
   return (
-    <div
-      ref={containerRef}
-      className="grid-debug-overlay"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        zIndex: 9999,
-      }}
-      data-grid-debug-overlay=""
-    >
-      {/* Column lines */}
-      {Array.from({ length: gridInfo.columns + 1 }, (_, i) => (
+    <div ref={ref} className="absolute inset-0 pointer-events-none z-[9999]" data-grid-debug-overlay="">
+      {Array.from({ length: cols + 1 }, (_, i) => (
         <div
           key={`col-${i}`}
-          className="grid-debug-line grid-debug-line-column"
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: `${(i / gridInfo.columns) * 100}%`,
-            width: '1px',
-            backgroundColor: 'rgba(0, 122, 255, 0.3)',
-          }}
+          className="absolute top-0 bottom-0"
+          style={{ left: `${(i / cols) * 100}%`, width: 1, backgroundColor: 'rgba(56, 189, 248, 0.35)' }}
           data-grid-debug-line="column"
         />
       ))}
-
-      {/* Row lines */}
-      {Array.from({ length: gridInfo.rows + 1 }, (_, i) => (
+      {Array.from({ length: rows + 1 }, (_, i) => (
         <div
           key={`row-${i}`}
-          className="grid-debug-line grid-debug-line-row"
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: `${(i / gridInfo.rows) * 100}%`,
-            height: '1px',
-            backgroundColor: 'rgba(0, 122, 255, 0.3)',
-          }}
+          className="absolute left-0 right-0"
+          style={{ top: `${(i / rows) * 100}%`, height: 1, backgroundColor: 'rgba(56, 189, 248, 0.35)' }}
           data-grid-debug-line="row"
         />
       ))}
@@ -781,15 +446,14 @@ function GridDebugOverlay() {
 }
 
 /* -------------------------------------------------------------------------------------------------
- * Grid.Preset Components
+ * Presets
  * ----------------------------------------------------------------------------------------------- */
 
-// Common layout presets
 export interface GridLayoutProps extends ComponentPropsWithoutRef<'div'> {
   children?: ReactNode
 }
 
-function GridHoly({ children, ...props }: GridLayoutProps) {
+function GridHoly(p: GridLayoutProps) {
   return (
     <GridContainer
       areas={{
@@ -798,55 +462,33 @@ function GridHoly({ children, ...props }: GridLayoutProps) {
       }}
       rows={{ base: 'auto 1fr auto', md: 'auto 1fr auto' }}
       columns={{ base: '1fr', md: '250px 1fr' }}
-      {...props}
+      {...p}
     >
-      {children}
+      {p.children}
     </GridContainer>
   )
 }
 
-function GridDashboard({ children, ...props }: GridLayoutProps) {
+function GridDashboard(p: GridLayoutProps) {
   return (
     <GridContainer
-      areas={{
-        base: `"nav" "main"`,
-        lg: `"nav main"`,
-      }}
+      areas={{ base: `"nav" "main"`, lg: `"nav main"` }}
       rows={{ base: 'auto 1fr', lg: '1fr' }}
       columns={{ base: '1fr', lg: '250px 1fr' }}
-      {...props}
+      {...p}
     >
-      {children}
+      {p.children}
     </GridContainer>
   )
 }
 
-function GridCards({ children, ...props }: GridLayoutProps) {
+function GridCards(p: GridLayoutProps) {
   return (
-    <GridAutoGrid
-      minItemWidth={{ base: '280px', md: '320px' }}
-      gap="standard"
-      {...props}
-    >
-      {children}
+    <GridAutoGrid minItemWidth={{ base: '280px', md: '320px' }} gap="standard" {...p}>
+      {p.children}
     </GridAutoGrid>
   )
 }
-
-/* -------------------------------------------------------------------------------------------------
- * Display Names
- * ----------------------------------------------------------------------------------------------- */
-
-GridRoot.displayName = 'Grid.Root'
-GridContainer.displayName = 'Grid.Container'
-GridItem.displayName = 'Grid.Item'
-GridArea.displayName = 'Grid.Area'
-GridStack.displayName = 'Grid.Stack'
-GridAutoGrid.displayName = 'Grid.AutoGrid'
-GridMasonry.displayName = 'Grid.Masonry'
-GridHoly.displayName = 'Grid.Holy'
-GridDashboard.displayName = 'Grid.Dashboard'
-GridCards.displayName = 'Grid.Cards'
 
 /* -------------------------------------------------------------------------------------------------
  * Exports
@@ -861,10 +503,7 @@ export const Grid = {
   AutoGrid: GridAutoGrid,
   Masonry: GridMasonry,
 
-  // Layout presets
   Holy: GridHoly,
   Dashboard: GridDashboard,
   Cards: GridCards,
 }
-
-export { resolveResponsiveValue, useBreakpoint, useGrid }
